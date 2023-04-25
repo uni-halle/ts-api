@@ -1,0 +1,11 @@
+services:
+  ts-api:
+    image: ts-api:local
+    restart: on-failure
+    ports:
+      - 5000:5000
+    volumes:
+      - data:/home/python/ts-api/data
+
+volumes:
+  data:

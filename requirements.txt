@@ -1,0 +1,6 @@
+werkzeug
+flask
+python-dotenv
+psutil
+pytest
+git+https://github.com/openai/whisper.git

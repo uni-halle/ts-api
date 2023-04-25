@@ -1,0 +1,8 @@
+.idea
+.git
+venv
+__pycache__
+Dockerfile
+/data/audioInput/*
+/data/jobDatabase/*
+/data/transcribeOutput/*
