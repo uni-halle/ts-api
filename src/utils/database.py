@@ -42,7 +42,6 @@ def delete_job(uid: str):
     :return: Nothing
     """
     logging.debug("Deleting job with id " + uid + " from database.")
-    job_data = load_job(uid)
     os.remove("./data/jobDatabase/" + uid + ".json")
 
 
@@ -63,7 +62,8 @@ def change_job_status(uid: str, status: int):
     :param status: The status id to set it to
     :return: Nothing
     """
-    logging.debug("Changing status of job with id " + uid + " to " + util.get_status(status) + ".")
+    logging.debug("Changing status of job with id "
+                  + uid + " to " + util.get_status(status) + ".")
     with open("./data/jobDatabase/" + uid + ".json", "r+") as file:
         job_data = json.load(file)
         job_data["status"] = status

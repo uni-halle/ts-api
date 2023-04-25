@@ -6,7 +6,6 @@ import pytest
 from werkzeug.datastructures import FileStorage
 
 from core.TsApi import TsApi
-from core.Transcriber import Transcriber
 
 
 class TestTsAPI:
@@ -50,7 +49,7 @@ class TestTsAPI:
 
     def test_register_job(self):
         ts_api: TsApi = TsApi()
-        trans: Transcriber = ts_api.register_job("1")
+        ts_api.register_job("1")
         assert len(ts_api.runningJobs) == 1
         assert ts_api.runningJobs.pop(0) == "1"
 

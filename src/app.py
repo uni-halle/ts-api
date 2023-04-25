@@ -7,7 +7,7 @@ import io
 import psutil
 
 import whisper.utils
-from flask import Flask, request, send_file, Response
+from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage
 
 from utils import database, util
@@ -56,7 +56,8 @@ def transcribe_post():
     elif link:
         try:
             uid = str(uuid.uuid4())
-            t = Thread(target=ts_api.add_link_to_queue, args=(uid, link, username, password, int(priority))).start()
+            Thread(target=ts_api.add_link_to_queue,
+                   args=(uid, link, username, password, int(priority))).start()
             return {"jobId": uid}, 201
         except:
             return {"Error": "Failed to add link"}, 400
@@ -70,8 +71,9 @@ def status():
     """
     req_id = request.args.get("id")
     if database.exists_job(req_id):
+        job_data = database.load_job(req_id)
         return {"jobId": req_id,
-                "status": util.get_status(database.load_job(req_id)["status"])}, 200
+                "status": util.get_status(job_data["status"])}, 200
     else:
         return {"error": "Job not found"}, 404
 
@@ -82,16 +84,21 @@ def system_status():
     Endpoint to return status of system
     :return: HttpResponse
     """
-    return {"cpu_usage": round(psutil.cpu_percent(interval=0.5) * 100 / psutil.cpu_count(), 1),
-            "cpu_cores": psutil.cpu_count(),
-            "ram_usage": round(psutil.virtual_memory().percent, 1),
-            "ram_free": round(psutil.virtual_memory().available * 100 / psutil.virtual_memory().total, 1),
-            "swap_usage": round(psutil.swap_memory().percent, 1),
-            "swap_free": round(psutil.swap_memory().free * 100 / psutil.swap_memory().total, 1),
-            "queue_length": ts_api.queue.qsize(),
-            "running_jobs": len(ts_api.runningJobs),
-            "parallel_jobs": int(os.environ.get("parallel_workers")),
-            "running_downloads": len(ts_api.runningDownloads)}, 200
+    return {
+        "cpu_usage": round(psutil.cpu_percent(interval=0.5)
+                           * 100 / psutil.cpu_count(), 1),
+        "cpu_cores": psutil.cpu_count(),
+        "ram_usage": round(psutil.virtual_memory().percent, 1),
+        "ram_free": round(psutil.virtual_memory().available
+                          * 100 / psutil.virtual_memory().total, 1),
+        "swap_usage": round(psutil.swap_memory().percent, 1),
+        "swap_free": round(psutil.swap_memory().free
+                           * 100 / psutil.swap_memory().total, 1),
+        "queue_length": ts_api.queue.qsize(),
+        "running_jobs": len(ts_api.runningJobs),
+        "parallel_jobs": int(os.environ.get("parallel_workers")),
+        "running_downloads": len(ts_api.runningDownloads)
+    }, 200
 
 
 @app.route("/transcribe", methods=['GET'])
@@ -157,8 +164,9 @@ def language_get():
     req_id = request.args.get("id")
     if database.exists_job(req_id):
         if database.load_job(req_id)["status"] >= 2:  # Whispered
+            job_data = database.load_job(req_id)
             return {"jobId": req_id,
-                    "language": database.load_job(req_id)["whisper_language"]}, 200
+                    "language": job_data["whisper_language"]}, 200
         else:
             return {"error": "Job not whispered"}, 200
     else:
