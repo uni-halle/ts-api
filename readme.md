@@ -1,6 +1,10 @@
 # Transcription API
 This program provides a REST API to asynchronously subtitle video and audio files via OpenAI Whisper.
 
+[![Build](https://github.com/uni-halle/ts-api/actions/workflows/build.yml/badge.svg)](https://github.com/uni-halle/ts-api/actions/workflows/build.yml)
+[![Test](https://github.com/uni-halle/ts-api/actions/workflows/test.yml/badge.svg)](https://github.com/uni-halle/ts-api/actions/workflows/test.yml)
+[![Lint](https://github.com/uni-halle/ts-api/actions/workflows/lint.yml/badge.svg)](https://github.com/uni-halle/ts-api/actions/workflows/lint.yml)
+
 
 ## Quickstart
 Download the repository and build the Docker image via `docker build . -t ts-api:local` and launch the image via Docker compose provided by the repository .
