@@ -27,7 +27,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        image: 'ghcr.io/uni-halle/ts-api'
+        images: 'ghcr.io/uni-halle/ts-api'
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
