@@ -60,7 +60,8 @@ class TsApi:
         # Add job to queue
         self.queue.put((priority, uid))
 
-    def add_link_to_queue(self, uid: str, link: str, username: str, password: str, priority: int):
+    def add_link_to_queue(self, uid: str, link: str, username: str,
+                          password: str, priority: int):
         """
         Adds job to queue
         :param uid: The uid of the job
@@ -95,7 +96,8 @@ class TsApi:
             # Add job to queue
             self.queue.put((priority, uid))
         except:
-            logging.error("Error downloading or adding job " + uid + " to queue.")
+            logging.error("Error downloading or adding job "
+                          + uid + " to queue.")
 
     # Track running jobs
     def register_job(self, uid):

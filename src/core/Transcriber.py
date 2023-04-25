@@ -38,10 +38,12 @@ class Transcriber:
         :return: Nothing
         """
         try:
-            logging.debug("Starting Whisper for job with id " + self.uid + "...")
+            logging.debug("Starting Whisper for job with id "
+                          + self.uid + "...")
             # Whisper
             model_size = os.environ.get("whisper_model")
-            model = whisper.load_model(model_size, download_root="./data/models")
+            model = whisper.load_model(model_size,
+                                       download_root="./data/models")
             audio = whisper.load_audio(self.file_path)
             result = whisper.transcribe(model, audio)
             self.whisper_result = result
@@ -55,4 +57,3 @@ class Transcriber:
         except:
             database.change_job_status(self.uid, 3)  # Failed
             self.ts_api.unregister_job(self.uid)
-

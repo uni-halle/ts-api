@@ -28,12 +28,18 @@ class TestDatabase:
         database.add_job("Testfile.txt", "1")
         assert os.path.exists("./data/jobDatabase/1.json")
         with open("./data/jobDatabase/1.json", "r") as file:
-            assert json.load(file) == {"filename": "1.txt", "id": "1", "status": 0}
+            assert json.load(file) == {
+                "filename": "1.txt",
+                "id": "1", "status": 0
+            }
             file.close()
 
     def test_load_job(self):
         setUpFile()
-        assert database.load_job("1") == {"filename": "1.txt", "id": 1, "status": 0}
+        assert database.load_job("1") == {
+            "filename": "1.txt",
+            "id": 1, "status": 0
+        }
 
     def test_exists_job(self):
         setUpFile()
@@ -43,14 +49,20 @@ class TestDatabase:
         setUpFile()
         database.change_job_status("1", 2)
         with open("./data/jobDatabase/1.json", "r") as file:
-            assert json.load(file) == {"filename": "1.txt", "id": 1, "status": 2}
+            assert json.load(file) == {
+                "filename": "1.txt",
+                "id": 1, "status": 2
+            }
             file.close()
 
     def test_set_whisper_result(self):
         setUpFile()
-        database.set_whisper_result("1", {"result": "This should be subtitled."})
+        database.set_whisper_result("1",
+                                    {"result": "This should be subtitled."})
         with open("./data/jobDatabase/1.json", "r") as file:
-            assert json.load(file)["whisper_result"] == {"result": "This should be subtitled."}
+            assert json.load(file)["whisper_result"] == {
+                "result": "This should be subtitled."
+            }
             file.close()
 
     def test_set_whisper_language(self):
