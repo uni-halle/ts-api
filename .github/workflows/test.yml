@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Create and start virtual environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+
+    - name: Install requirements
+      run: pip install -r requirements.txt
+
+    - name: Run pytest
+      run: pytest --junitxml=/artifacts/junit-report.xml
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifacts@v3
+      with:
+        name: Junit Report
+        path: /artifacts/junit-report.xml
+        retention-days: 14
