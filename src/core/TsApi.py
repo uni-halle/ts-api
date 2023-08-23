@@ -80,9 +80,11 @@ class TsApi:
             response = session.get(link, allow_redirects=False)
             if response.status_code != 200:
                 raise Exception
+            file_extension = response.headers.get("Content-Disposition").split(".")[-1]
+            logging.info(file_extension)
             file = FileStorage(
                 stream=io.BytesIO(response.content),
-                filename=uid + ".mp4",
+                filename=uid + "." + response.headers.get("Content-Disposition").split(".")[-1],
                 content_length=response.headers.get("Content-Length"),
                 content_type=response.headers.get("Content-Type")
             )
