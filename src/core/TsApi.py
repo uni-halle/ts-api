@@ -78,13 +78,12 @@ class TsApi:
             if username and password:
                 session.auth = (username, password)
             response = session.get(link, allow_redirects=False)
+            ext = response.headers.get("Content-Disposition").split(".")[-1]
             if response.status_code != 200:
                 raise Exception
-            file_extension = response.headers.get("Content-Disposition").split(".")[-1]
-            logging.info(file_extension)
             file = FileStorage(
                 stream=io.BytesIO(response.content),
-                filename=uid + "." + response.headers.get("Content-Disposition").split(".")[-1],
+                filename=uid + "." + ext,
                 content_length=response.headers.get("Content-Length"),
                 content_type=response.headers.get("Content-Type")
             )
