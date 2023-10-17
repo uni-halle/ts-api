@@ -55,6 +55,7 @@ class Transcriber:
             logging.debug("Finished Whisper for job with id " + self.uid + "!")
             self.ts_api.unregister_job(self.uid)
         except Exception as e:
+            os.remove(self.file_path)
             logging.error(e)
             database.change_job_status(self.uid, 3)  # Failed
             self.ts_api.unregister_job(self.uid)
