@@ -128,8 +128,8 @@ def transcribe_get():
                             job_data['whisper_result'],
                             file,
                             {"max_line_width": 55,
-                            "max_line_count": 2,
-                            "highlight_words": False}
+                                "max_line_count": 2,
+                                "highlight_words": False}
                         )
                         return Response(file.getvalue(), mimetype="text/vtt")
                 except Exception as e:
