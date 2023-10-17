@@ -124,9 +124,13 @@ def transcribe_get():
                 try:
                     with io.StringIO() as file:
                         writer = writers[output_format]("./data")
-                        writer.write_result(job_data['whisper_result'], file, {"max_line_width": 55,
-                                                                               "max_line_count": 2,
-                                                                               "highlight_words": False})
+                        writer.write_result(
+                            job_data['whisper_result'],
+                            file,
+                            {"max_line_width": 55,
+                            "max_line_count": 2,
+                            "highlight_words": False}
+                        )
                         return Response(file.getvalue(), mimetype="text/vtt")
                 except Exception as e:
                     logging.debug(e)
