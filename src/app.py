@@ -8,7 +8,7 @@ import psutil
 
 import whisper.utils
 from flask import Flask, request, Response
-from werkzeug.datastructures import FileStorage
+from werkzeug.datastructures import FileStorage, Authorization
 
 from utils import database, util
 from core.TsApi import TsApi
@@ -24,6 +24,17 @@ ts_api.start_thread()
 app.logger.disabled = True
 log = logging.getLogger('werkzeug')
 log.disabled = True
+
+
+@app.before_request
+def authorisation():
+    auth: Authorization = request.authorization
+    if not (auth
+            and (auth.username == os.environ.get("login_username")
+                 and auth.password == os.environ.get("login_password"))):
+        return ('Unauthorized', 401, {
+            'WWW-Authenticate': 'Basic realm="Login Required"'
+        })
 
 
 @app.route("/transcribe", methods=['POST'])
