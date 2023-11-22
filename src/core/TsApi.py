@@ -97,6 +97,7 @@ class TsApi:
             # Add job to queue
             self.queue.put((priority, uid))
         except:
+            database.change_job_status(uid, 3)  # Failed
             logging.error("Error downloading or adding job "
                           + uid + " to queue.")
 
