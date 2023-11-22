@@ -112,6 +112,18 @@ def system_status():
     }, 200
 
 
+@app.route("/", methods=['GET'])
+def main():
+    """
+    Endpoint to return main of system
+    :return: HttpResponse
+    """
+    return {
+        "message": "Listening to API calls",
+        "status": 200
+    }, 200
+
+
 @app.route("/transcribe", methods=['GET'])
 def transcribe_get():
     """
@@ -139,8 +151,8 @@ def transcribe_get():
                             job_data['whisper_result'],
                             file,
                             {"max_line_width": 55,
-                                "max_line_count": 2,
-                                "highlight_words": False}
+                             "max_line_count": 2,
+                             "highlight_words": False}
                         )
                         return Response(file.getvalue(), mimetype="text/vtt")
                 except Exception as e:
