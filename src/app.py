@@ -105,7 +105,7 @@ def system_status():
         "swap_usage": round(psutil.swap_memory().percent, 1),
         "swap_free": round(psutil.swap_memory().free
                            * 100 / psutil.swap_memory().total, 1),
-        "queue_length": ts_api.queue.qsize(),
+        "queue_length": (ts_api.queue.qsize() + len(ts_api.runningDownloads)),
         "running_jobs": len(ts_api.runningJobs),
         "parallel_jobs": int(os.environ.get("parallel_workers")),
         "running_downloads": len(ts_api.runningDownloads)
