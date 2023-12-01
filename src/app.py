@@ -102,6 +102,9 @@ def system_status():
         "ram_usage": round(psutil.virtual_memory().percent, 1),
         "ram_free": round(psutil.virtual_memory().available
                           * 100 / psutil.virtual_memory().total, 1),
+        "storage_total": round(psutil.disk_usage('./').total / 1000000000, 1),
+        "storage_usage": round(psutil.disk_usage('./').used / 1000000000, 1),
+        "storage_free": round(psutil.disk_usage('./').free / 1000000000, 1),
         "swap_usage": round(psutil.swap_memory().percent, 1),
         "swap_free": round(psutil.swap_memory().free
                            * 100 / psutil.swap_memory().total, 1),
