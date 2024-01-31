@@ -53,6 +53,10 @@ def transcribe_post():
     if not priority.isnumeric():
         return {"error": "Priority nan"}, 400
 
+    if (100 / round(psutil.disk_usage('./').total / 1000000000, 1)
+            * round(psutil.disk_usage('./').used / 1000000000, 1) > 90):
+        return {"error": "Not enough storage"}, 507
+
     if 'file' in request.files:
         try:
             file: FileStorage = request.files['file']
@@ -65,6 +69,9 @@ def transcribe_post():
         except:
             return {"Error": "Failed to add file"}, 400
     elif link:
+        if len(ts_api.runningDownloads) >= 3:
+            return {"Error": "Too many downloads already running"}, 503
+
         try:
             uid = str(uuid.uuid4())
             Thread(target=ts_api.add_link_to_queue,
