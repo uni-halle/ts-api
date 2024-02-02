@@ -76,7 +76,8 @@ def transcribe_post():
             uid = str(uuid.uuid4())
             if username and password:
                 Thread(target=ts_api.add_link_to_queue,
-                    args=(uid, link, int(priority), username, password)).start()
+                       args=(uid, link, int(priority),
+                             username, password)).start()
                 return {"jobId": uid}, 201
             else:
                 Thread(target=ts_api.add_link_to_queue,

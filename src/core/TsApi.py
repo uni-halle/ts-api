@@ -60,14 +60,14 @@ class TsApi:
         # Add job to queue
         self.queue.put((priority, uid))
 
-    def add_link_to_queue(self, uid: str, link: str, priority: int, username: str = None,
-                          password: str = None):
+    def add_link_to_queue(self, uid: str, link: str, priority: int,
+                          username: str = None, password: str = None):
         """
         Adds job to queue
         :param uid: The uid of the job
         :param link: The link the job should process
         :param username: The username to log in to the website
-        :param password: The password to log in to the website
+        :param password: The password to log in to the website<
         :param priority: The priority of the job itself
         :return: The uid the job got assigned
         """
