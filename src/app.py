@@ -50,7 +50,7 @@ def transcribe_post():
     if ('file' not in request.files) and (not link):
         return {"error": "No file or link"}, 415
 
-    if not priority.isnumeric():
+    if not priority or not priority.isnumeric():
         return {"error": "Priority nan"}, 400
 
     if (100 / round(psutil.disk_usage('./').total / 1000000000, 1)
