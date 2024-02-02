@@ -60,8 +60,8 @@ class TsApi:
         # Add job to queue
         self.queue.put((priority, uid))
 
-    def add_link_to_queue(self, uid: str, link: str, username: str,
-                          password: str, priority: int):
+    def add_link_to_queue(self, uid: str, link: str, priority: int, username: str = None,
+                          password: str = None):
         """
         Adds job to queue
         :param uid: The uid of the job
@@ -75,14 +75,19 @@ class TsApi:
             logging.info("Downloading file for job id " + uid + "...")
             self.runningDownloads.append(uid)
             session: request = requests.Session()
+            # Add job to database
+            database.add_job(uid, uid)
+            # Check if username and password is present
             if username and password:
                 session.auth = (username, password)
+            # Get Response
             response = session.get(link, allow_redirects=False)
+            # Check Response
             if response.status_code != 200:
                 raise Exception
             file = FileStorage(
                 stream=io.BytesIO(response.content),
-                filename=uid + "." + link.split(".")[-1],
+                filename=uid,
                 content_length=response.headers.get("Content-Length"),
                 content_type=response.headers.get("Content-Type")
             )
@@ -91,8 +96,6 @@ class TsApi:
             util.save_file(file, uid)
             self.runningDownloads.remove(uid)
             logging.info("Adding job with id " + uid + " to queue.")
-            # Add job to database
-            database.add_job(file.filename, uid)
             # Add job to queue
             self.queue.put((priority, uid))
         except:

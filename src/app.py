@@ -67,18 +67,23 @@ def transcribe_post():
                 ts_api.add_file_to_queue(uid, file, int(priority))
                 return {"jobId": uid}, 201
         except:
-            return {"Error": "Failed to add file"}, 400
+            return {"Error": "Failed to add file"}, 500
     elif link:
         if len(ts_api.runningDownloads) >= 3:
             return {"Error": "Too many downloads already running"}, 503
 
         try:
             uid = str(uuid.uuid4())
-            Thread(target=ts_api.add_link_to_queue,
-                   args=(uid, link, username, password, int(priority))).start()
-            return {"jobId": uid}, 201
+            if username and password:
+                Thread(target=ts_api.add_link_to_queue,
+                    args=(uid, link, int(priority), username, password)).start()
+                return {"jobId": uid}, 201
+            else:
+                Thread(target=ts_api.add_link_to_queue,
+                       args=(uid, link, int(priority))).start()
+                return {"jobId": uid}, 201
         except:
-            return {"Error": "Failed to add link"}, 400
+            return {"Error": "Failed to add link"}, 500
 
 
 @app.route("/status", methods=['GET'])
