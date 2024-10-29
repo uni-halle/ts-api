@@ -10,16 +10,16 @@ class TestUtil:
     @pytest.fixture(autouse=True)
     def set_up_tear_down(self):
         yield
-        if os.path.exists("./data/audioInput/1.txt"):
-            os.remove("./data/audioInput/1.txt")
+        if os.path.exists("./data/audioInput/UID"):
+            os.remove("./data/audioInput/UID")
 
     def test_save_file(self):
         file = FileStorage(
             stream=io.BytesIO(bytes("Test", 'UTF-8')),
-            filename="1.txt"
+            filename="UID"
         )
-        util.save_file(file, "1")
-        with open("./data/audioInput/1.txt", "r") as file:
+        util.save_file(file, "UID")
+        with open("./data/audioInput/UID", "r") as file:
             assert file.read() == "Test"
             file.close()
 
