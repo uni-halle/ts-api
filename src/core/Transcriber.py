@@ -17,7 +17,7 @@ class Transcriber:
         job_data = database.load_job(uid)
         self.whisper_result = None
         self.whisper_language = None
-        self.file_path = "./data/audioInput/" + job_data["filename"]
+        self.file_path = "./data/audioInput/" + uid
         self.uid = uid
         self.ts_api = ts_api
         database.change_job_status(self.uid, 0)  # Prepared
@@ -50,6 +50,7 @@ class Transcriber:
             database.set_whisper_result(self.uid, result)
             self.whisper_language = result['language']
             database.set_whisper_language(self.uid, result['language'])
+            database.set_whisper_model(self.uid, model_size)
             database.change_job_status(self.uid, 2)  # Whispered
             os.remove(self.file_path)
             logging.debug("Finished Whisper for job with id " + self.uid + "!")
