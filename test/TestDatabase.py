@@ -8,8 +8,8 @@ from utils import database
 
 def set_up_file() -> None:
     job_data = {"id": "UID",
-            "module_id": None,
-            "status": 0}
+                "module_id": None,
+                "status": 0}
     with open("./data/jobDatabase/UID.json", "x") as file:
         file.write(json.dumps(job_data))
         file.close()

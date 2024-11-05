@@ -12,8 +12,8 @@ class TestTsAPI:
     @pytest.fixture(autouse=True)
     def set_up_tear_down(self):
         job_data = {"id": "UID",
-                "module_id": None,
-                "status": 0}
+                    "module_id": None,
+                    "status": 0}
         with open("./data/jobDatabase/UID.json", "x") as file:
             file.write(json.dumps(job_data))
             file.close()
@@ -37,7 +37,6 @@ class TestTsAPI:
         ts_api: TsApi = TsApi()
         assert ts_api.running
         assert len(ts_api.runningJobs) == 0
-        assert len(ts_api.runningDownloads) == 0
 
     def test_register_job(self):
         ts_api: TsApi = TsApi()

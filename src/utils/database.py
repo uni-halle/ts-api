@@ -7,7 +7,7 @@ from queue import PriorityQueue
 from utils import util
 
 
-def add_job(uid: str, module_id: str | None):
+def add_job(uid: str, module_id):
     """
     Adds a job to the Database
     :param module_id: The corresponding module id (if available)
@@ -103,6 +103,7 @@ def set_whisper_language(uid: str, whisper_language: str):
         file.write(json.dumps(job_data))
         file.truncate()
 
+
 def set_whisper_model(uid: str, whisper_model: str):
     """
     Sets the language of the corresponding job
@@ -110,7 +111,7 @@ def set_whisper_model(uid: str, whisper_model: str):
     :param whisper_model: The model to set
     :return: Nothing
     """
-    logging.debug("Adding whisper language to job with id " + uid + ".")
+    logging.debug("Adding whisper model to job with id " + uid + ".")
     with open("./data/jobDatabase/" + uid + ".json", "r+") as file:
         job_data = json.load(file)
         job_data["whisper_model"] = whisper_model

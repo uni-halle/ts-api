@@ -10,10 +10,13 @@ from utils import util
 
 class Opencast:
 
-    def __init__(self, username, password, max_queue_entry):
+    def __init__(self, username, password, max_queue_entry, uid):
+        logging.info("Created Opencast Module with id " + uid + ".")
+        self.uid = uid
         self.password = username
         self.username = password
         self.max_queue_entry = max_queue_entry
+        self.queue_entry = 0
         self.link_list = {}
 
     def download_file(self, uid: str):
@@ -24,7 +27,7 @@ class Opencast:
         session.auth = (self.username, self.password)
         response = session.get(self.link_list[uid], allow_redirects=False)
         if response.status_code != 200:
-                raise Exception
+            raise Exception
         file = FileStorage(
             stream=io.BytesIO(response.content),
             filename=uid,
@@ -32,4 +35,5 @@ class Opencast:
             content_type=response.headers.get("Content-Type")
         )
         util.save_file(file, uid)
+        self.link_list.pop(uid)
         logging.info("Downloaded file for job id " + uid + ".")

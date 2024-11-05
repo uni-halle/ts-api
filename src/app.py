@@ -1,7 +1,6 @@
 import logging
 import os
 import uuid
-from threading import Thread
 
 import io
 import psutil
@@ -58,6 +57,25 @@ def transcribe_post():
     if not priority or not priority.isnumeric():
         return {"error": "Priority nan"}, 400
 
+    # Self-care system
+    ram_usage = round(psutil.virtual_memory().percent, 1)
+    cpu_usage = round(psutil.cpu_percent(interval=0.5))
+    storage_total = round(psutil.disk_usage('./').total / 1000000000, 1)
+    storage_usage = round(psutil.disk_usage('./').used / 1000000000, 1)
+
+    if 100 / storage_total * storage_usage > 90:
+        return {"error": "Not enough storage"}, 507
+
+    if ram_usage > 90:
+        return {"error": "Not enough ram"}, 507
+
+    if cpu_usage > 400:
+        return {"error": "Not enough cpu"}, 507
+
+    if ts_api.queue.qsize() > 50:
+        return {"error": "The queue is full"}, 507
+
+    # Old File upload
     if 'file' in request.files:
         file: FileStorage = request.files['file']
         util.save_file(file, uid)
@@ -70,15 +88,22 @@ def transcribe_post():
             if module_id in ts_api.opencastModules:
                 # Module specific
                 opencast_module: Opencast = ts_api.opencastModules[module_id]
-                opencast_module.link_list[uid] = link
-                database.add_job(uid, module_id)
+                if (opencast_module.queue_entry
+                        < opencast_module.max_queue_entry):
+                    opencast_module.queue_entry = (
+                        opencast_module.queue_entry + 1)
+                    opencast_module.link_list[uid] = link
+                    database.add_job(uid, module_id)
 
-                ts_api.add_to_queue(uid, module_id, int(priority))
-                return {"jobId": uid}, 201
+                    ts_api.add_to_queue(uid, module_id, int(priority))
+                    return {"jobId": uid}, 201
+                else:
+                    return {"error": "Max Opencast Queue length reached"}, 429
             else:
-                return {"Error": "Module ID not found"}, 400
+                return {"error": "Module ID not found"}, 400
         else:
-            return {"Error": "Module not found"}, 400
+            return {"error": "Module not found"}, 400
+
 
 @app.route("/transcribe", methods=['GET'])
 def transcribe_get():
@@ -139,6 +164,7 @@ def transcribe_delete():
     else:
         return {"error": "Job not found"}, 404
 
+
 # Add Module Routes here
 @app.route("/module/opencast", methods=['POST'])
 def module_opencast_post():
@@ -148,14 +174,16 @@ def module_opencast_post():
     """
     username: str = request.form.get("username")
     password: str = request.form.get("password")
-    max_queue_length: str = request.form.get("max_queue_length")
-    if not(username and password):
+    max_queue_length: int = int(request.form.get("max_queue_length"))
+    if not (username and password):
         return {"error": "No username or password specified"}, 400
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
     uid = str(uuid.uuid4())
-    ts_api.opencastModules[uid] = Opencast(username, password, max_queue_length)
+    ts_api.opencastModules[uid] = Opencast(username, password,
+                                           max_queue_length, uid)
     return {"moduleId": uid}, 201
+
 
 # Status Routes
 @app.route("/status", methods=['GET'])
@@ -194,8 +222,7 @@ def system_status():
                            * 100 / psutil.swap_memory().total, 1),
         "queue_length": ts_api.queue.qsize(),
         "running_jobs": len(ts_api.runningJobs),
-        "parallel_jobs": int(os.environ.get("parallel_workers")),
-        "running_downloads": len(ts_api.runningDownloads)
+        "parallel_jobs": int(os.environ.get("parallel_workers"))
     }, 200
 
 
@@ -210,6 +237,7 @@ def main():
         "status": 200
     }, 200
 
+
 @app.route("/language", methods=['GET'])
 def language_get():
     """
@@ -218,11 +246,29 @@ def language_get():
     """
     req_id = request.args.get("id")
     if database.exists_job(req_id):
-        if database.load_job(req_id)["status"] >= 2:  # Whispered
-            job_data = database.load_job(req_id)
+        job_data = database.load_job(req_id)
+        if "whisper_language" in job_data:
             return {"jobId": req_id,
                     "language": job_data["whisper_language"]}, 200
         else:
-            return {"error": "Job not whispered"}, 200
+            return {"error": "Job not preprocessed"}, 200
+    else:
+        return {"error": "Job not found"}, 404
+
+
+@app.route("/model", methods=['GET'])
+def model_get():
+    """
+    Endpoint to return language of video
+    :return: HttpResponse
+    """
+    req_id = request.args.get("id")
+    if database.exists_job(req_id):
+        job_data = database.load_job(req_id)
+        if "whisper_model" in job_data:  # Whispered
+            return {"jobId": req_id,
+                    "model": job_data["whisper_model"]}, 200
+        else:
+            return {"error": "Job not preprocessed"}, 200
     else:
         return {"error": "Job not found"}, 404

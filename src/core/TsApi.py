@@ -1,4 +1,3 @@
-import io
 import logging
 import os
 import signal
@@ -8,14 +7,11 @@ import time
 from queue import PriorityQueue
 from typing import List, Dict
 
-import requests
 import whisper
-from requests import request
-from werkzeug.datastructures import FileStorage
 
 from core.Transcriber import Transcriber
 from packages.Opencast import Opencast
-from utils import util, database
+from utils import database
 
 
 class TsApi:
@@ -29,13 +25,11 @@ class TsApi:
         signal.signal(signal.SIGTERM, self.exit)
         self.queue: PriorityQueue = database.load_queue()
         self.runningJobs: List[str] = []
-        self.runningDownloads: List[str] = []
         self.opencastModules: Dict[str, Opencast] = {}
         model_size = os.environ.get("whisper_model")
-        if not os.path.exists("./data/models/" + model_size +".pt"):
+        if not os.path.exists("./data/models/" + model_size + ".pt"):
             logging.info("Downloading Whisper model...")
-            model = whisper.load_model(model_size,
-                                    download_root="./data/models")
+            whisper.load_model(model_size, download_root="./data/models")
         logging.info("Whisper model \"" + model_size + "\" loaded!")
         logging.info("TsAPI started!")
         self.running: bool = True
@@ -53,7 +47,7 @@ class TsApi:
         logging.info("TsAPI stopped!")
         sys.exit(1)
 
-    def add_to_queue(self, uid: str, module_id: str | None, priority: int):
+    def add_to_queue(self, uid: str, module_id, priority: int):
         """
         Adds job to queue
         :param module_id: The corresponding module id (if available)
@@ -66,7 +60,7 @@ class TsApi:
         self.queue.put((priority, (uid, module_id)))
 
     # Track running jobs
-    def register_job(self, uid: str, module_id: str | None):
+    def register_job(self, uid: str, module_id):
         """
         Register a running job
         :param module_id: The corresponding module id (if available)
@@ -76,7 +70,9 @@ class TsApi:
         logging.info("Starting job with id " + uid + ".")
         # Checking Opencast module
         if module_id and module_id in self.opencastModules:
-            self.opencastModules[module_id].download_file(uid)
+            opencast_module: Opencast = self.opencastModules[module_id]
+            opencast_module.download_file(uid)
+            opencast_module.queue_entry = opencast_module.queue_entry - 1
         # Create transcriber
         trans = Transcriber(self, uid)
         # Add running job

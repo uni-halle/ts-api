@@ -40,6 +40,7 @@ def get_status(status_id: int):
         0: "Prepared",
         1: "Running",
         2: "Whispered",
-        3: "Failed"
+        3: "Failed",
+        4: "Preprocessed"
     }
-    return status.get(status_id, 'Error')
+    return status.get(status_id, 'error')

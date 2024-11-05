@@ -31,4 +31,4 @@ class TestUtil:
             3: "Failed"
         }
         for i in range(4):
-            assert util.get_status(i) == status.get(i, 'Error')
+            assert util.get_status(i) == status.get(i, 'error')
