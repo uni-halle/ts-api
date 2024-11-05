@@ -1,4 +1,3 @@
-import io
 import logging
 import os
 import signal
@@ -6,14 +5,13 @@ import sys
 import threading
 import time
 from queue import PriorityQueue
-from typing import List
+from typing import List, Dict
 
-import requests
-from requests import request
-from werkzeug.datastructures import FileStorage
+import whisper
 
 from core.Transcriber import Transcriber
-from utils import util, database
+from packages.Opencast import Opencast
+from utils import database
 
 
 class TsApi:
@@ -27,9 +25,14 @@ class TsApi:
         signal.signal(signal.SIGTERM, self.exit)
         self.queue: PriorityQueue = database.load_queue()
         self.runningJobs: List[str] = []
-        self.runningDownloads: List[str] = []
-        self.running: bool = True
+        self.opencastModules: Dict[str, Opencast] = {}
+        model_size = os.environ.get("whisper_model")
+        if not os.path.exists("./data/models/" + model_size + ".pt"):
+            logging.info("Downloading Whisper model...")
+            whisper.load_model(model_size, download_root="./data/models")
+        logging.info("Whisper model \"" + model_size + "\" loaded!")
         logging.info("TsAPI started!")
+        self.running: bool = True
 
     def exit(self, sig, frame):
         """
@@ -44,73 +47,32 @@ class TsApi:
         logging.info("TsAPI stopped!")
         sys.exit(1)
 
-    def add_file_to_queue(self, uid: str, file: FileStorage, priority: int):
+    def add_to_queue(self, uid: str, module_id, priority: int):
         """
         Adds job to queue
+        :param module_id: The corresponding module id (if available)
         :param uid: The uid of the job
-        :param file: The file the job should process
         :param priority: The priority of the job itself
         :return: The uid the job got assigned
         """
         logging.info("Adding job with id " + uid + " to queue.")
-        # Safe file to input folder
-        util.save_file(file, uid)
-        # Add job to database
-        database.add_job(file.filename, uid)
         # Add job to queue
-        self.queue.put((priority, uid))
-
-    def add_link_to_queue(self, uid: str, link: str, priority: int,
-                          username: str = None, password: str = None):
-        """
-        Adds job to queue
-        :param uid: The uid of the job
-        :param link: The link the job should process
-        :param username: The username to log in to the website
-        :param password: The password to log in to the website<
-        :param priority: The priority of the job itself
-        :return: The uid the job got assigned
-        """
-        try:
-            logging.info("Downloading file for job id " + uid + "...")
-            self.runningDownloads.append(uid)
-            session: request = requests.Session()
-            # Add job to database
-            database.add_job(uid, uid)
-            # Check if username and password is present
-            if username and password:
-                session.auth = (username, password)
-            # Get Response
-            response = session.get(link, allow_redirects=False)
-            # Check Response
-            if response.status_code != 200:
-                raise Exception
-            file = FileStorage(
-                stream=io.BytesIO(response.content),
-                filename=uid,
-                content_length=response.headers.get("Content-Length"),
-                content_type=response.headers.get("Content-Type")
-            )
-            logging.info("Downloaded file for job id " + uid + ".")
-            # Safe file to input folder
-            util.save_file(file, uid)
-            self.runningDownloads.remove(uid)
-            logging.info("Adding job with id " + uid + " to queue.")
-            # Add job to queue
-            self.queue.put((priority, uid))
-        except:
-            database.change_job_status(uid, 3)  # Failed
-            logging.error("Error downloading or adding job "
-                          + uid + " to queue.")
+        self.queue.put((priority, (uid, module_id)))
 
     # Track running jobs
-    def register_job(self, uid):
+    def register_job(self, uid: str, module_id):
         """
         Register a running job
+        :param module_id: The corresponding module id (if available)
         :param uid: The uid of the job
         :return: The transcriber model the registered job prepared
         """
         logging.info("Starting job with id " + uid + ".")
+        # Checking Opencast module
+        if module_id and module_id in self.opencastModules:
+            opencast_module: Opencast = self.opencastModules[module_id]
+            opencast_module.download_file(uid)
+            opencast_module.queue_entry = opencast_module.queue_entry - 1
         # Create transcriber
         trans = Transcriber(self, uid)
         # Add running job
@@ -146,9 +108,9 @@ class TsApi:
             parallel_worker = int(os.environ.get("parallel_workers"))
             if len(self.runningJobs) < parallel_worker:
                 if not self.queue.empty():
-                    uid = self.queue.get()[1]
+                    uid, module_id = self.queue.get()[1]
                     # Register running job
-                    trans: Transcriber = self.register_job(uid)
+                    trans: Transcriber = self.register_job(uid, module_id)
                     # Start running job
                     trans.start_thread()
             time.sleep(5)

@@ -7,16 +7,16 @@ from queue import PriorityQueue
 from utils import util
 
 
-def add_job(filename: str, uid: str):
+def add_job(uid: str, module_id):
     """
     Adds a job to the Database
-    :param filename: The name of the jobs file
+    :param module_id: The corresponding module id (if available)
     :param uid: The uid for the job
     :return: Nothing
     """
     logging.debug("Adding job with id " + uid + " to database.")
     job_data = {"id": uid,
-                "filename": uid + os.path.splitext(filename)[1],
+                "module_id": module_id,
                 "status": 0}
     with open("./data/jobDatabase/" + uid + ".json", "x") as file:
         file.write(json.dumps(job_data))
@@ -99,6 +99,22 @@ def set_whisper_language(uid: str, whisper_language: str):
     with open("./data/jobDatabase/" + uid + ".json", "r+") as file:
         job_data = json.load(file)
         job_data["whisper_language"] = whisper_language
+        file.seek(0)
+        file.write(json.dumps(job_data))
+        file.truncate()
+
+
+def set_whisper_model(uid: str, whisper_model: str):
+    """
+    Sets the language of the corresponding job
+    :param uid: The uid from the job
+    :param whisper_model: The model to set
+    :return: Nothing
+    """
+    logging.debug("Adding whisper model to job with id " + uid + ".")
+    with open("./data/jobDatabase/" + uid + ".json", "r+") as file:
+        job_data = json.load(file)
+        job_data["whisper_model"] = whisper_model
         file.seek(0)
         file.write(json.dumps(job_data))
         file.truncate()

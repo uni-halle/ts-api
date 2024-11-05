@@ -1,6 +1,9 @@
 import logging
 import threading
 import os
+
+import torch
+
 from utils import database
 import whisper
 
@@ -14,10 +17,9 @@ class Transcriber:
         """
         logging.debug("Preparing Transcriber for job with id " + uid + "...")
         # Prepare
-        job_data = database.load_job(uid)
         self.whisper_result = None
         self.whisper_language = None
-        self.file_path = "./data/audioInput/" + job_data["filename"]
+        self.file_path = "./data/audioInput/" + uid
         self.uid = uid
         self.ts_api = ts_api
         database.change_job_status(self.uid, 0)  # Prepared
@@ -40,16 +42,30 @@ class Transcriber:
         try:
             logging.debug("Starting Whisper for job with id "
                           + self.uid + "...")
-            # Whisper
+            # Whisper model
             model_size = os.environ.get("whisper_model")
             model = whisper.load_model(model_size,
                                        download_root="./data/models")
+            database.set_whisper_model(self.uid, model_size)
+            # Load audio
             audio = whisper.load_audio(self.file_path)
-            result = whisper.transcribe(model, audio)
+            short_audio = whisper.pad_or_trim(audio)
+            # Detect language
+            mel = (whisper.log_mel_spectrogram(short_audio, model.dims.n_mels)
+                   .to(model.device).to(torch.float32))
+            _, probs = model.detect_language(mel)
+            self.whisper_language = str(max(probs, key=probs.get))
+            database.set_whisper_language(self.uid,
+                                          str(max(probs, key=probs.get)))
+            database.change_job_status(self.uid, 4)  # Preprocessed
+            # Translate audio
+            result = whisper.transcribe(model=model,
+                                        audio=audio,
+                                        language=self.whisper_language,
+                                        fp16=False)
+            # Store results
             self.whisper_result = result
             database.set_whisper_result(self.uid, result)
-            self.whisper_language = result['language']
-            database.set_whisper_language(self.uid, result['language'])
             database.change_job_status(self.uid, 2)  # Whispered
             os.remove(self.file_path)
             logging.debug("Finished Whisper for job with id " + self.uid + "!")

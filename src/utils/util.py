@@ -25,8 +25,7 @@ def save_file(file: FileStorage, uid: str):
     :param uid: The uid of the job the file belongs to
     :return: Nothing
     """
-    file_extension = os.path.splitext(file.filename)[1]
-    file_path = os.path.join("./data", "audioInput", uid + file_extension)
+    file_path = os.path.join("./data", "audioInput", uid)
     file.save(file_path)
 
 
@@ -41,6 +40,7 @@ def get_status(status_id: int):
         0: "Prepared",
         1: "Running",
         2: "Whispered",
-        3: "Failed"
+        3: "Failed",
+        4: "Preprocessed"
     }
-    return status.get(status_id, 'Error')
+    return status.get(status_id, 'error')
