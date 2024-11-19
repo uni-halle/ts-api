@@ -1,7 +1,6 @@
 import logging
 import os
 import signal
-import sys
 import threading
 import time
 from queue import PriorityQueue
@@ -41,11 +40,11 @@ class TsApi:
         logging.info("Stopping TsAPI...")
         self.running = False
         database.save_queue(self.queue)
-        while len(self.runningJobs) > 0:
-            logging.info("Waiting for job to finish...")
-            time.sleep(10)
+        for uid in self.runningJobs:
+            logging.info("Cancel job with id " + uid + " because of shutdown.")
+            database.change_job_status(uid, 5)
         logging.info("TsAPI stopped!")
-        sys.exit(1)
+        os.kill(os.getpid(), signal.SIGKILL)
 
     def add_to_queue(self, uid: str, module_id, priority: int):
         """
@@ -60,23 +59,15 @@ class TsApi:
         self.queue.put((priority, (uid, module_id)))
 
     # Track running jobs
-    def register_job(self, uid: str, module_id):
+    def register_job(self, uid: str):
         """
         Register a running job
-        :param module_id: The corresponding module id (if available)
         :param uid: The uid of the job
         :return: The transcriber model the registered job prepared
         """
         logging.info("Starting job with id " + uid + ".")
-        # Checking Opencast module
-        if module_id and module_id in self.opencastModules:
-            opencast_module: Opencast = self.opencastModules[module_id]
-            opencast_module.download_file(uid)
-            opencast_module.queue_entry = opencast_module.queue_entry - 1
         # Create transcriber
         trans = Transcriber(self, uid)
-        # Add running job
-        self.runningJobs.append(uid)
         # Return prepared transcriber
         return trans
 
@@ -109,8 +100,29 @@ class TsApi:
             if len(self.runningJobs) < parallel_worker:
                 if not self.queue.empty():
                     uid, module_id = self.queue.get()[1]
+                    self.runningJobs.append(uid)
+                    # Checking module
+                    if module_id:
+                        # Opencast Module
+                        if module_id in self.opencastModules:
+                            logging.info("Preprocessing job with id " + uid +
+                                         ".")
+                            # ModuleID found
+                            opencast_module: Opencast = self.opencastModules[
+                                module_id]
+                            opencast_module.download_file(uid)
+                            opencast_module.queue_entry = (
+                                    opencast_module.queue_entry - 1)
+                        else:
+                            logging.info("Job with " + uid + " cant be "
+                                                             "preprocessed "
+                                                             "because of "
+                                                             "missing module.")
+                            # ModuleID not found
+                            database.change_job_status(uid, 5)
+                            continue
                     # Register running job
-                    trans: Transcriber = self.register_job(uid, module_id)
+                    trans: Transcriber = self.register_job(uid)
                     # Start running job
                     trans.start_thread()
             time.sleep(5)
