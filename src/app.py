@@ -172,16 +172,11 @@ def module_opencast_post():
     Endpoint to accept videos and links to whisper
     :return: HttpResponse
     """
-    username: str = request.form.get("username")
-    password: str = request.form.get("password")
     max_queue_length: int = int(request.form.get("max_queue_length"))
-    if not (username and password):
-        return {"error": "No username or password specified"}, 400
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
     uid = str(uuid.uuid4())
-    ts_api.opencastModules[uid] = Opencast(username, password,
-                                           max_queue_length, uid)
+    ts_api.opencastModules[uid] = Opencast(max_queue_length, uid)
     return {"moduleId": uid}, 201
 
 

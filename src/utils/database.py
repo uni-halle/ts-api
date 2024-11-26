@@ -3,7 +3,9 @@ import logging
 import os
 
 from queue import PriorityQueue
+from typing import Dict
 
+from packages.Opencast import Opencast
 from utils import util
 
 
@@ -127,10 +129,50 @@ def save_queue(queue: PriorityQueue):
     :return: Nothing
     """
     logging.debug("Saving queue to database.")
-    with open("./data/jobDatabase/queue.json", "w+") as file:
+    with open("./data/queue.json", "w+") as file:
         file.seek(0)
         file.write(json.dumps(queue.queue))
         file.truncate()
+
+
+def save_opencast_module(modules: Dict[str, Opencast]):
+    """
+    Saves the given queue to the database
+    :param modules: The queue to save
+    :return: Nothing
+    """
+    logging.debug("Saving Opencast Modules to database.")
+    for uid, module in modules.items():
+        if module.queue_entry == 0:
+            if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
+                os.remove("./data/moduleDatabase/" + uid + ".json")
+            continue
+        with open("./data/moduleDatabase/" + uid + ".json",
+                  "w+") as file:
+            file.seek(0)
+            file.write(json.dumps({"uid": uid, "max_queue_entry":
+                module.max_queue_entry, "queue_entry": module.queue_entry,
+                                   "link_list": module.link_list}))
+            file.truncate()
+
+
+def load_opencast_modules():
+    """
+    Saves the given queue to the database
+    :return: All used Opencast Modules
+    """
+    logging.debug("Loading Opencast Module from database.")
+    modules: Dict[str, Opencast] = {}
+    for file_name in os.listdir("./data/moduleDatabase"):
+        if file_name.endswith(".json"):
+            file_path = os.path.join("./data/moduleDatabase", file_name)
+            with open(file_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            modules[data.get("uid")] = Opencast(
+                data.get("max_queue_entry"),
+                data.get("uid"), data.get(
+                    "queue_entry"), data.get("link_list"))
+    return modules
 
 
 def load_queue():
@@ -140,8 +182,8 @@ def load_queue():
     """
     logging.debug("Loading queue to database.")
     queue = PriorityQueue()
-    if os.path.exists("./data/jobDatabase/queue.json"):
-        with open("./data/jobDatabase/queue.json", "r") as file:
+    if os.path.exists("./data/queue.json"):
+        with open("./data/queue.json", "r") as file:
             queue_data = json.load(file)
             while len(queue_data) > 0:
                 data = queue_data.pop()

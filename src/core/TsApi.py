@@ -24,7 +24,7 @@ class TsApi:
         signal.signal(signal.SIGTERM, self.exit)
         self.queue: PriorityQueue = database.load_queue()
         self.runningJobs: List[str] = []
-        self.opencastModules: Dict[str, Opencast] = {}
+        self.opencastModules: Dict[str, Opencast] = database.load_opencast_modules()
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
             logging.info("Downloading Whisper model...")
@@ -40,6 +40,7 @@ class TsApi:
         logging.info("Stopping TsAPI...")
         self.running = False
         database.save_queue(self.queue)
+        database.save_opencast_module(self.opencastModules)
         for uid in self.runningJobs:
             logging.info("Cancel job with id " + uid + " because of shutdown.")
             database.change_job_status(uid, 5)

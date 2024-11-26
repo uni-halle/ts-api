@@ -10,21 +10,18 @@ from utils import util
 
 class Opencast:
 
-    def __init__(self, username, password, max_queue_entry, uid):
-        logging.info("Created Opencast Module with id " + uid + ".")
+    def __init__(self, max_queue_entry, uid, queue_entry=0, link_list=None):
+        if link_list is None:
+            link_list = {}
+        logging.debug("Created Opencast Module with id " + uid + ".")
         self.uid = uid
-        self.password = username
-        self.username = password
         self.max_queue_entry = max_queue_entry
-        self.queue_entry = 0
-        self.link_list = {}
+        self.queue_entry = queue_entry
+        self.link_list = link_list
 
     def download_file(self, uid: str):
         logging.info("Downloading file for job id " + uid + "...")
         session: request = requests.Session()
-        if not (self.username and self.password):
-            raise Exception
-        session.auth = (self.username, self.password)
         response = session.get(self.link_list[uid], allow_redirects=False)
         if response.status_code != 200:
             raise Exception
