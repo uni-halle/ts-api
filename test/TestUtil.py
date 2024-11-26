@@ -25,10 +25,12 @@ class TestUtil:
 
     def test_get_status(self):
         status = {
-            0: "Prepared",
-            1: "Running",
-            2: "Whispered",
-            3: "Failed"
+            0: "Queued",
+            1: "Prepared",
+            2: "Preprocessed",
+            3: "Whispered",
+            4: "Failed",
+            5: "Canceled"
         }
-        for i in range(4):
+        for i in range(5):
             assert util.get_status(i) == status.get(i, 'error')

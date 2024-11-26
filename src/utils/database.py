@@ -151,8 +151,9 @@ def save_opencast_module(modules: Dict[str, Opencast]):
                   "w+") as file:
             file.seek(0)
             file.write(json.dumps({"uid": uid, "max_queue_entry":
-                module.max_queue_entry, "queue_entry": module.queue_entry,
-                                   "link_list": module.link_list}))
+                                  module.max_queue_entry, "queue_entry":
+                                  module.queue_entry,
+                                  "link_list": module.link_list}))
             file.truncate()
 
 

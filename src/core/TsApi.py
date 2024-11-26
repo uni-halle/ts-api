@@ -24,7 +24,8 @@ class TsApi:
         signal.signal(signal.SIGTERM, self.exit)
         self.queue: PriorityQueue = database.load_queue()
         self.runningJobs: List[str] = []
-        self.opencastModules: Dict[str, Opencast] = database.load_opencast_modules()
+        self.opencastModules: Dict[str, Opencast] = (
+            database.load_opencast_modules())
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
             logging.info("Downloading Whisper model...")
@@ -112,14 +113,14 @@ class TsApi:
                     if module_id:
                         # Opencast Module
                         if module_id in self.opencastModules:
-                            logging.info("Preprocessing job with id " + uid +
-                                         ".")
+                            logging.info("Preprocessing job with id " + uid
+                                         + ".")
                             # ModuleID found
                             opencast_module: Opencast = self.opencastModules[
                                 module_id]
                             opencast_module.download_file(uid)
                             opencast_module.queue_entry = (
-                                    opencast_module.queue_entry - 1)
+                                opencast_module.queue_entry - 1)
                     # Change Status to prepared
                     database.change_job_status(uid, 1)  # Prepared
                     # Remove Job From Queue
