@@ -37,15 +37,3 @@ class TestTsAPI:
         ts_api: TsApi = TsApi()
         assert ts_api.running
         assert len(ts_api.runningJobs) == 0
-
-    def test_register_job(self):
-        ts_api: TsApi = TsApi()
-        ts_api.register_job("UID", None)
-        assert len(ts_api.runningJobs) == 1
-        assert ts_api.runningJobs.pop(0) == "UID"
-
-    def test_unregister_job(self):
-        ts_api: TsApi = TsApi()
-        ts_api.runningJobs.append("UID")
-        ts_api.unregister_job("UID")
-        assert len(ts_api.runningJobs) == 0

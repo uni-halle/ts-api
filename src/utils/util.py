@@ -37,10 +37,11 @@ def get_status(status_id: int):
     :return: The corresponding name of status
     """
     status = {
-        0: "Prepared",
-        1: "Running",
-        2: "Whispered",
-        3: "Failed",
-        4: "Preprocessed"
+        0: "Queued",
+        1: "Prepared",
+        2: "Preprocessed",
+        3: "Whispered",
+        4: "Failed",
+        5: "Canceled"
     }
     return status.get(status_id, 'error')

@@ -15,15 +15,11 @@ class Transcriber:
         :param ts_api: The main ts_api object to call back
         :param uid: The uid of the job to create the transcriber object for
         """
-        logging.debug("Preparing Transcriber for job with id " + uid + "...")
-        # Prepare
         self.whisper_result = None
         self.whisper_language = None
         self.file_path = "./data/audioInput/" + uid
         self.uid = uid
         self.ts_api = ts_api
-        database.change_job_status(self.uid, 0)  # Prepared
-        logging.debug("Prepared Transcriber for job with id " + self.uid + "!")
 
     def start_thread(self):
         """
@@ -32,7 +28,6 @@ class Transcriber:
         """
         whisper_thread = threading.Thread(target=self.transcriber_thread)
         whisper_thread.start()
-        database.change_job_status(self.uid, 1)  # Running
 
     def transcriber_thread(self):
         """
@@ -57,7 +52,7 @@ class Transcriber:
             self.whisper_language = str(max(probs, key=probs.get))
             database.set_whisper_language(self.uid,
                                           str(max(probs, key=probs.get)))
-            database.change_job_status(self.uid, 4)  # Preprocessed
+            database.change_job_status(self.uid, 2)  # Preprocessed
             # Translate audio
             result = whisper.transcribe(model=model,
                                         audio=audio,
@@ -66,12 +61,12 @@ class Transcriber:
             # Store results
             self.whisper_result = result
             database.set_whisper_result(self.uid, result)
-            database.change_job_status(self.uid, 2)  # Whispered
+            database.change_job_status(self.uid, 3)  # Whispered
             os.remove(self.file_path)
             logging.debug("Finished Whisper for job with id " + self.uid + "!")
             self.ts_api.unregister_job(self.uid)
         except Exception as e:
             os.remove(self.file_path)
             logging.error(e)
-            database.change_job_status(self.uid, 3)  # Failed
+            database.change_job_status(self.uid, 4)  # Failed
             self.ts_api.unregister_job(self.uid)

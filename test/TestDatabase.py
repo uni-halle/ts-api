@@ -21,8 +21,8 @@ class TestDatabase:
         yield
         if os.path.exists("./data/jobDatabase/UID.json"):
             os.remove("./data/jobDatabase/UID.json")
-        if os.path.exists("./data/jobDatabase/queue.json"):
-            os.remove("./data/jobDatabase/queue.json")
+        if os.path.exists("./data/queue.json"):
+            os.remove("./data/queue.json")
 
     def test_add_job(self):
         database.add_job("UID", None)
@@ -79,15 +79,15 @@ class TestDatabase:
         queue = PriorityQueue()
         queue.put(("0", "UID"))
         database.save_queue(queue)
-        assert os.path.exists("./data/jobDatabase/queue.json")
-        with open("./data/jobDatabase/queue.json", "r") as file:
+        assert os.path.exists("./data/queue.json")
+        with open("./data/queue.json", "r") as file:
             assert json.load(file) == [['0', 'UID']]
             file.close()
 
     def test_load_queue_existing(self):
         queue_insert = PriorityQueue()
         queue_insert.put(("0", "UID"))
-        with open("./data/jobDatabase/queue.json", "x") as file:
+        with open("./data/queue.json", "x") as file:
             file.write(json.dumps(queue_insert.queue))
             file.close()
         queue = database.load_queue()
