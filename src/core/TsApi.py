@@ -39,11 +39,13 @@ class TsApi:
         """
         logging.info("Stopping TsAPI...")
         self.running = False
-        database.save_queue(self.queue)
         database.save_opencast_module(self.opencastModules)
         for uid in self.runningJobs:
-            logging.info("Cancel job with id " + uid + " because of shutdown.")
-            database.change_job_status(uid, 5)
+            logging.info("Requeue job with id " + uid + " because of "
+                                                        "shutdown.")
+            database.change_job_status(uid, 1)  # Prepared
+            self.queue.put((0, (uid, None)))
+        database.save_queue(self.queue)
         logging.info("TsAPI stopped!")
         os.kill(os.getpid(), signal.SIGKILL)
 
@@ -72,7 +74,7 @@ class TsApi:
         # Return prepared transcriber
         return trans
 
-    def unregister_job(self, uid):
+    def unregister_job(self, uid: str):
         """
         Unregister a finished job
         :param uid: The uid of the job
@@ -100,7 +102,11 @@ class TsApi:
             parallel_worker = int(os.environ.get("parallel_workers"))
             if len(self.runningJobs) < parallel_worker:
                 if not self.queue.empty():
-                    uid, module_id = self.queue.get()[1]
+                    # Peek Job from Queue
+                    uid: str
+                    module_id: str
+                    with self.queue.mutex:
+                        uid, module_id = self.queue.queue[0][1]
                     self.runningJobs.append(uid)
                     # Checking module
                     if module_id:
@@ -114,16 +120,12 @@ class TsApi:
                             opencast_module.download_file(uid)
                             opencast_module.queue_entry = (
                                     opencast_module.queue_entry - 1)
-                        else:
-                            logging.info("Job with " + uid + " cant be "
-                                                             "preprocessed "
-                                                             "because of "
-                                                             "missing module.")
-                            # ModuleID not found
-                            database.change_job_status(uid, 5)
-                            continue
-                    # Register running job
+                    # Change Status to prepared
+                    database.change_job_status(uid, 1)  # Prepared
+                    # Remove Job From Queue
+                    self.queue.get()
+                    # Register job
                     trans: Transcriber = self.register_job(uid)
-                    # Start running job
+                    # Start job
                     trans.start_thread()
             time.sleep(5)
