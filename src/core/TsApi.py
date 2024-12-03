@@ -103,30 +103,33 @@ class TsApi:
             parallel_worker = int(os.environ.get("parallel_workers"))
             if len(self.runningJobs) < parallel_worker:
                 if not self.queue.empty():
-                    # Peek Job from Queue
-                    uid: str
-                    module_id: str
-                    with self.queue.mutex:
-                        uid, module_id = self.queue.queue[0][1]
-                    self.runningJobs.append(uid)
-                    # Checking module
-                    if module_id:
-                        # Opencast Module
-                        if module_id in self.opencastModules:
-                            logging.info("Preprocessing job with id " + uid
-                                         + ".")
-                            # ModuleID found
-                            opencast_module: Opencast = self.opencastModules[
-                                module_id]
-                            opencast_module.download_file(uid)
-                            opencast_module.queue_entry = (
-                                opencast_module.queue_entry - 1)
-                    # Change Status to prepared
-                    database.change_job_status(uid, 1)  # Prepared
+                    try:
+                        # Peek Job from Queue
+                        uid: str
+                        module_id: str
+                        with self.queue.mutex:
+                            uid, module_id = self.queue.queue[0][1]
+                        self.runningJobs.append(uid)
+                        # Checking module
+                        if module_id:
+                            # Opencast Module
+                            if module_id in self.opencastModules:
+                                logging.info("Preprocessing job with id " + uid
+                                             + ".")
+                                # ModuleID found
+                                opencast_module: Opencast = (
+                                    self.opencastModules)[module_id]
+                                opencast_module.download_file(uid)
+                                opencast_module.queue_entry = (
+                                    opencast_module.queue_entry - 1)
+                        # Change Status to prepared
+                        database.change_job_status(uid, 1)  # Prepared
+                        # Register job
+                        trans: Transcriber = self.register_job(uid)
+                        # Start job
+                        trans.start_thread()
+                    except Exception:
+                        pass
                     # Remove Job From Queue
                     self.queue.get()
-                    # Register job
-                    trans: Transcriber = self.register_job(uid)
-                    # Start job
-                    trans.start_thread()
             time.sleep(5)
