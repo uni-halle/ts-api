@@ -117,8 +117,8 @@ class TsApi:
                                 logging.info("Preprocessing job with id " + uid
                                              + ".")
                                 # ModuleID found
-                                opencast_module: Opencast = self.opencastModules[
-                                    module_id]
+                                opencast_module: Opencast = (
+                                    self.opencastModules)[module_id]
                                 opencast_module.download_file(uid)
                                 opencast_module.queue_entry = (
                                     opencast_module.queue_entry - 1)
