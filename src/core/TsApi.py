@@ -129,7 +129,8 @@ class TsApi:
                         # Start job
                         trans.start_thread()
                     except Exception:
-                        pass
+                        # Change Status to prepared
+                        database.change_job_status(uid, 5)  # Cancled
                     # Remove Job From Queue
                     self.queue.get()
             time.sleep(5)
