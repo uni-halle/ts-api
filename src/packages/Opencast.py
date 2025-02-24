@@ -1,7 +1,7 @@
 import logging
 import uuid
 import io
-from abc import abstractmethod
+from typing import Dict
 
 from werkzeug.datastructures import FileStorage
 
@@ -11,47 +11,88 @@ import requests
 from requests import request
 from packages.Default import Default
 
-
+# noinspection PyMethodOverriding
 class Opencast(Default):
+    """
+    Eine Implementierung des Default-Moduls für Opencast.
 
-    def __init__(self, max_queue_length):
-        self.module_uid = str(uuid.uuid4())
-        self.max_queue_length = max_queue_length
-        self.entrys = {}
-        logging.debug("Created Opencast Module with id " + self.module_uid +
-                      ".")
+    :var module_uid: Eindeutige ID des Moduls.
+    :var entrys: Dictionary mit den Einträgen des Moduls.
+    :var max_queue_length: Maximale Anzahl von Einträgen in der Warteschlange.
+    """
 
-    def create(self, uid, link, title):
-        module_entry = Opencast.Entry(self, uid, link, title)
+    def __init__(self, max_queue_length: int) -> None:
+        """
+        Initialisiert ein Opencast-Modul mit einer maximalen Warteschlangenlänge.
+
+        :param max_queue_length: Die maximale Anzahl an Jobs, die verarbeitet werden können.
+        """
+        super().__init__()
+        self.max_queue_length: int = max_queue_length
+        logging.debug(f"Created Opencast Module with id {self.module_uid}.")
+
+    def create(self, uid: str, link: str, initial_prompt: str):
+        """
+        Erstellt einen neuen Opencast Moduleintrag.
+
+        :param uid: Die eindeutige ID des Eintrags.
+        :param link: Die URL zur Datei.
+        :param initial_prompt: Die initiale Beschreibung oder der Titel des Eintrags.
+        :return: Der erstellte Moduleintrag.
+        """
+        module_entry: Opencast.Entry = Opencast.Entry(self, uid, link, initial_prompt)
         self.entrys[uid] = module_entry
         return module_entry
 
-    @abstractmethod
-    class Entry:
-        @abstractmethod
-        def __init__(self, default, uid, link, title):
-            self.default: Opencast = default
-            self.uid = uid
-            self.link = link
-            self.initial_prompt = title
-            logging.debug("Created Opencast Module entry with id " +
-                          self.uid +
-                          ".")
+    # noinspection PyMethodOverriding
+    class Entry(Default.Entry):
+        """
+        Repräsentiert einen einzelnen Eintrag im Opencast-Modul.
 
-        @abstractmethod
+        :var module: Die zugehörige Opencast-Modulinstanz.
+        :var uid: Die eindeutige ID des Eintrags.
+        :var link: URL zur Datei.
+        :var initial_prompt: Initiale Beschreibung oder Titel.
+        """
+
+        def __init__(self, module, uid: str, link: str, initial_prompt: str) -> None:
+            """
+            Initialisiert einen neuen Opencast Moduleintrag.
+
+            :param module: Die zugehörige Modulinstanz.
+            :param uid: Die eindeutige ID des Eintrags.
+            :param link: Die URL zur Datei.
+            :param initial_prompt: Die initiale Beschreibung oder der Titel des Eintrags.
+            """
+            super().__init__(module, uid)
+            self.module: Opencast = module
+            self.link: str = link
+            self.initial_prompt: str = initial_prompt
+            logging.debug(f"Created Opencast Module entry with id {self.uid}.")
+
         def queuing(self) -> bool:
-            if len(self.default.entrys) < self.default.max_queue_length:
+            """
+            Fügt einen Job zur Warteschlange hinzu, falls noch Platz vorhanden ist.
+
+            :return: `True`, wenn der Job hinzugefügt wurde, `False`, wenn die Warteschlange voll ist.
+            """
+            if len(self.module.entrys) < self.module.max_queue_length:
                 database.add_job(self)
                 return True
             return False
 
-        @abstractmethod
-        def preprocessing(self):
-            logging.debug("Downloading file for job id " + self.uid + "...")
+        def preprocessing(self) -> None:
+            """
+            Lädt die Datei von der angegebenen URL herunter und speichert sie lokal.
+            Falls der Download fehlschlägt, wird eine Exception ausgelöst.
+
+            :raises Exception: Falls der Download fehlschlägt.
+            """
+            logging.debug(f"Downloading file for job id {self.uid}...")
             session: request = requests.Session()
             response = session.get(self.link)
             if response.status_code != 200:
-                raise Exception
+                raise Exception("Failed to download file.")
             file = FileStorage(
                 stream=io.BytesIO(response.content),
                 filename=self.uid,
@@ -59,4 +100,4 @@ class Opencast(Default):
                 content_type=response.headers.get("Content-Type")
             )
             util.save_file(file, self.uid)
-            logging.debug("Downloaded file for job id " + self.uid + ".")
+            logging.debug(f"Downloaded file for job id {self.uid}.")

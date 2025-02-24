@@ -25,7 +25,7 @@ def save_file(file: FileStorage, uid: str):
     :param uid: The uid of the job the file belongs to
     :return: Nothing
     """
-    file_path = os.path.join("./data", "audioInput", uid)
+    file_path = os.path.join(os.getcwd(), "data", "audioInput", uid)
     file.save(file_path)
 
 

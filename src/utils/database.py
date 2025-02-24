@@ -17,7 +17,7 @@ def add_job(module_entry: Default.Entry):
     """
     logging.debug("Adding job with id " + module_entry.uid + " to database.")
     job_data = {"id": module_entry.uid,
-                "module_id": module_entry.default.module_uid,
+                "module_id": module_entry.module.module_uid,
                 "status": 0}
     with open("./data/jobDatabase/" + module_entry.uid + ".json", "x") as file:
         file.write(json.dumps(job_data))

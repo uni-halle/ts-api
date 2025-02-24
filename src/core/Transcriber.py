@@ -5,7 +5,6 @@ import os
 import torch
 
 from packages.Default import Default
-from packages.Opencast import Opencast
 from utils import database
 import whisper
 
@@ -37,10 +36,6 @@ class Transcriber:
         :return: Nothing
         """
         try:
-            ### Cast to your module Entry here
-            if isinstance(self.module_entry.default, Opencast):
-                self.module_entry: Opencast.Entry = self.module_entry
-            ###
             logging.info("Starting processing for job with id "
                           + self.module_entry.uid + "...")
             # Whisper model

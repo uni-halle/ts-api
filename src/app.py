@@ -9,6 +9,7 @@ import whisper.utils
 from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage, Authorization
 
+from File import File
 from packages.Opencast import Opencast
 from packages.Default import Default
 from utils import database, util
@@ -77,10 +78,10 @@ def transcribe_post():
     if ts_api.queue.qsize() > 50:
         return {"error": "The queue is full"}, 507
 
-    # Old File upload
+    # Old File.py upload
     if 'file' in request.files:
         file: FileStorage = request.files['file']
-        module_entry: Default.Entry = ts_api.default_module.create(uid)
+        module_entry: File.Entry = ts_api.file_module.create(uid)
         module_entry.queuing(file)
         ts_api.add_to_queue(int(priority), module_entry)
         return {"jobId": uid}, 201
@@ -88,7 +89,7 @@ def transcribe_post():
     elif module and module_id:
         if module == "opencast" and title and link:
             if module_id in ts_api.modules:
-                module: Opencast = ts_api.modules[module_id]
+                module: Default = ts_api.modules[module_id]
                 module_entry: Opencast.Entry = module.create(uid, link, title)
                 if module_entry.queuing():
                     ts_api.add_to_queue(int(priority), module_entry)
@@ -171,9 +172,9 @@ def module_opencast_post():
     max_queue_length: int = int(request.form.get("max_queue_length"))
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
-    uid = str(uuid.uuid4())
-    ts_api.modules[uid] = Opencast(max_queue_length)
-    return {"moduleId": uid}, 201
+    module: Opencast = Opencast(max_queue_length)
+    ts_api.modules[module.module_uid] = module
+    return {"moduleId": module.module_uid}, 201
 
 
 # Status Routes
