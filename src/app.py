@@ -10,6 +10,7 @@ from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage, Authorization
 
 from packages.Opencast import Opencast
+from packages.Default import Default
 from utils import database, util
 from core.TsApi import TsApi
 from dotenv import load_dotenv
@@ -50,6 +51,7 @@ def transcribe_post():
     module: str = request.form.get("module")
     module_id: str = request.form.get("module_id")
     link: str = request.form.get("link")
+    title: str = request.form.get("title")
 
     if ('file' not in request.files) and (not (module and module_id and link)):
         return {"error": "No file or link with module and module id"}, 415
@@ -78,24 +80,18 @@ def transcribe_post():
     # Old File upload
     if 'file' in request.files:
         file: FileStorage = request.files['file']
-        util.save_file(file, uid)
-        database.add_job(uid, None)
-        ts_api.add_to_queue(uid, None, int(priority))
+        module_entry: Default.Entry = ts_api.default_module.create(uid)
+        module_entry.queuing(file)
+        ts_api.add_to_queue(int(priority), module_entry)
         return {"jobId": uid}, 201
     # Insert modules here
-    elif module and module_id and link:
-        if module == "opencast":
-            if module_id in ts_api.opencastModules:
-                # Module specific
-                opencast_module: Opencast = ts_api.opencastModules[module_id]
-                if (opencast_module.queue_entry
-                        < opencast_module.max_queue_entry):
-                    opencast_module.queue_entry = (
-                        opencast_module.queue_entry + 1)
-                    opencast_module.link_list[uid] = link
-                    database.add_job(uid, module_id)
-
-                    ts_api.add_to_queue(uid, module_id, int(priority))
+    elif module and module_id:
+        if module == "opencast" and title and link:
+            if module_id in ts_api.modules:
+                module: Opencast = ts_api.modules[module_id]
+                module_entry: Opencast.Entry = module.create(uid, link, title)
+                if module_entry.queuing():
+                    ts_api.add_to_queue(int(priority), module_entry)
                     return {"jobId": uid}, 201
                 else:
                     return {"error": "Max Opencast Queue length reached"}, 429
@@ -176,7 +172,7 @@ def module_opencast_post():
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
     uid = str(uuid.uuid4())
-    ts_api.opencastModules[uid] = Opencast(max_queue_length, uid)
+    ts_api.modules[uid] = Opencast(max_queue_length)
     return {"moduleId": uid}, 201
 
 
@@ -216,7 +212,7 @@ def system_status():
         "swap_free": round(psutil.swap_memory().free
                            * 100 / psutil.swap_memory().total, 1),
         "queue_length": ts_api.queue.qsize(),
-        "running_jobs": len(ts_api.runningJobs),
+        "running_jobs": len(ts_api.running_jobs),
         "parallel_jobs": int(os.environ.get("parallel_workers"))
     }, 200
 
@@ -246,7 +242,7 @@ def language_get():
             return {"jobId": req_id,
                     "language": job_data["whisper_language"]}, 200
         else:
-            return {"error": "Job not preprocessed"}, 200
+            return {"error": "Job not processed"}, 200
     else:
         return {"error": "Job not found"}, 404
 
@@ -264,6 +260,6 @@ def model_get():
             return {"jobId": req_id,
                     "model": job_data["whisper_model"]}, 200
         else:
-            return {"error": "Job not preprocessed"}, 200
+            return {"error": "Job not processed"}, 200
     else:
         return {"error": "Job not found"}, 404
