@@ -39,7 +39,7 @@ def get_status(status_id: int):
     status = {
         0: "Queued",
         1: "Prepared",
-        2: "Preprocessed",
+        2: "Processed",
         3: "Whispered",
         4: "Failed",
         5: "Canceled"

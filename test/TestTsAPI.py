@@ -36,4 +36,4 @@ class TestTsAPI:
         os.environ.setdefault("whisper_model", "small")
         ts_api: TsApi = TsApi()
         assert ts_api.running
-        assert len(ts_api.runningJobs) == 0
+        assert len(ts_api.running_jobs) == 0

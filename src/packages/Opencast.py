@@ -1,36 +1,62 @@
 import logging
+import uuid
 import io
+from abc import abstractmethod
 
-import requests
-from requests import request
 from werkzeug.datastructures import FileStorage
 
-from utils import util
+import database
+import util
+import requests
+from requests import request
+from packages.Default import Default
 
 
-class Opencast:
+class Opencast(Default):
 
-    def __init__(self, max_queue_entry, uid, queue_entry=0, link_list=None):
-        if link_list is None:
-            link_list = {}
-        logging.debug("Created Opencast Module with id " + uid + ".")
-        self.uid = uid
-        self.max_queue_entry = max_queue_entry
-        self.queue_entry = queue_entry
-        self.link_list = link_list
+    def __init__(self, max_queue_length):
+        self.module_uid = str(uuid.uuid4())
+        self.max_queue_length = max_queue_length
+        self.entrys = {}
+        logging.debug("Created Opencast Module with id " + self.module_uid +
+                      ".")
 
-    def download_file(self, uid: str):
-        logging.info("Downloading file for job id " + uid + "...")
-        session: request = requests.Session()
-        response = session.get(self.link_list[uid], allow_redirects=False)
-        if response.status_code != 200:
-            raise Exception
-        file = FileStorage(
-            stream=io.BytesIO(response.content),
-            filename=uid,
-            content_length=response.headers.get("Content-Length"),
-            content_type=response.headers.get("Content-Type")
-        )
-        util.save_file(file, uid)
-        self.link_list.pop(uid)
-        logging.info("Downloaded file for job id " + uid + ".")
+    def create(self, uid, link, title):
+        module_entry = Opencast.Entry(self, uid, link, title)
+        self.entrys[uid] = module_entry
+        return module_entry
+
+    @abstractmethod
+    class Entry:
+        @abstractmethod
+        def __init__(self, default, uid, link, title):
+            self.default: Opencast = default
+            self.uid = uid
+            self.link = link
+            self.initial_prompt = title
+            logging.debug("Created Opencast Module entry with id " +
+                          self.uid +
+                          ".")
+
+        @abstractmethod
+        def queuing(self) -> bool:
+            if len(self.default.entrys) < self.default.max_queue_length:
+                database.add_job(self)
+                return True
+            return False
+
+        @abstractmethod
+        def preprocessing(self):
+            logging.debug("Downloading file for job id " + self.uid + "...")
+            session: request = requests.Session()
+            response = session.get(self.link)
+            if response.status_code != 200:
+                raise Exception
+            file = FileStorage(
+                stream=io.BytesIO(response.content),
+                filename=self.uid,
+                content_length=response.headers.get("Content-Length"),
+                content_type=response.headers.get("Content-Type")
+            )
+            util.save_file(file, self.uid)
+            logging.debug("Downloaded file for job id " + self.uid + ".")

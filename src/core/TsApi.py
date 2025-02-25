@@ -9,7 +9,7 @@ from typing import List, Dict
 import whisper
 
 from core.Transcriber import Transcriber
-from packages.Opencast import Opencast
+from packages.Default import Default
 from utils import database
 
 
@@ -22,10 +22,10 @@ class TsApi:
         logging.info("Starting TsAPI...")
         signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
-        self.queue: PriorityQueue = database.load_queue()
-        self.runningJobs: List[str] = []
-        self.opencastModules: Dict[str, Opencast] = (
-            database.load_opencast_modules())
+        self.queue: PriorityQueue[(int, Default.Entry)] = database.load_queue()
+        self.running_jobs: List[Default.Entry] = []
+        self.default_module = Default()
+        self.modules: Dict[str, Default] = {} #  database.load_modules()
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
             logging.info("Downloading Whisper model...")
@@ -40,50 +40,50 @@ class TsApi:
         """
         logging.info("Stopping TsAPI...")
         self.running = False
-        database.save_opencast_module(self.opencastModules)
-        for uid in self.runningJobs:
-            logging.info("Requeue job with id " + uid + " because of "
+        # database.save_modules(self.modules)
+        for module_entry in self.running_jobs:
+            logging.info("Requeue job with id " + module_entry.uid + " because of "
                                                         "shutdown.")
-            database.change_job_status(uid, 1)  # Prepared
-            self.queue.put((0, (uid, None)))
+            database.change_job_status(module_entry, 1)  # Prepared
+            self.add_to_queue(0, module_entry)
         database.save_queue(self.queue)
         logging.info("TsAPI stopped!")
         os.kill(os.getpid(), signal.SIGKILL)
 
-    def add_to_queue(self, uid: str, module_id, priority: int):
+    def add_to_queue(self, priority: int, module_entry: Default.Entry) -> None:
         """
         Adds job to queue
-        :param module_id: The corresponding module id (if available)
-        :param uid: The uid of the job
+        :param module_entry: The corresponding module entry
+        :param module_entry: The module_entry of the job
         :param priority: The priority of the job itself
         :return: The uid the job got assigned
         """
-        logging.info("Adding job with id " + uid + " to queue.")
+        logging.info("Adding job with id " + module_entry.uid + " to queue.")
         # Add job to queue
-        self.queue.put((priority, (uid, module_id)))
+        self.queue.put((priority, module_entry))
 
     # Track running jobs
-    def register_job(self, uid: str):
+    def register_job(self, entry: Default.Entry):
         """
         Register a running job
-        :param uid: The uid of the job
+        :param entry: The uid of the job
         :return: The transcriber model the registered job prepared
         """
-        logging.info("Starting job with id " + uid + ".")
+        logging.info("Starting job with id " + entry.uid + ".")
         # Create transcriber
-        trans = Transcriber(self, uid)
+        trans = Transcriber(self, entry)
         # Return prepared transcriber
         return trans
 
-    def unregister_job(self, uid: str):
+    def unregister_job(self, entry: Default.Entry):
         """
         Unregister a finished job
-        :param uid: The uid of the job
+        :param entry: The uid of the job
         :return: Nothing
         """
         # Remove finished Job
-        logging.info("Finished job with id " + uid + ".")
-        self.runningJobs.remove(uid)
+        logging.info("Finished job with id " + entry.uid + ".")
+        self.running_jobs.remove(entry)
 
     # Thread to manage queue
     def start_thread(self):
@@ -101,36 +101,29 @@ class TsApi:
         """
         while self.running:
             parallel_worker = int(os.environ.get("parallel_workers"))
-            if len(self.runningJobs) < parallel_worker:
+            if len(self.running_jobs) < parallel_worker:
                 if not self.queue.empty():
+                    module_entry: Default.Entry = self.queue.get(timeout=5)[1]
                     try:
-                        # Peek Job from Queue
-                        uid: str
-                        module_id: str
-                        with self.queue.mutex:
-                            uid, module_id = self.queue.queue[0][1]
-                        self.runningJobs.append(uid)
-                        # Checking module
-                        if module_id:
-                            # Opencast Module
-                            if module_id in self.opencastModules:
-                                logging.info("Preprocessing job with id " + uid
-                                             + ".")
-                                # ModuleID found
-                                opencast_module: Opencast = (
-                                    self.opencastModules)[module_id]
-                                opencast_module.download_file(uid)
-                                opencast_module.queue_entry = (
-                                    opencast_module.queue_entry - 1)
+                        self.running_jobs.append(module_entry)
+
+                        logging.info("Started preparing job with id " +
+                                     module_entry.uid
+                                     + ".")
+                        module_entry.preprocessing()
+                        logging.info("Finished preparing job with id " +
+                                     module_entry.uid
+                                     + ".")
+
                         # Change Status to prepared
-                        database.change_job_status(uid, 1)  # Prepared
+                        database.change_job_status(module_entry,
+                                                   1)  # Prepared
                         # Register job
-                        trans: Transcriber = self.register_job(uid)
+                        trans: Transcriber = self.register_job(module_entry)
                         # Start job
                         trans.start_thread()
                     except Exception:
                         # Change Status to prepared
-                        database.change_job_status(uid, 5)  # Cancled
-                    # Remove Job From Queue
-                    self.queue.get()
+                        database.change_job_status(module_entry,
+                                                   5)  # Canceled
             time.sleep(5)
