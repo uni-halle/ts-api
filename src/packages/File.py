@@ -22,17 +22,6 @@ class File(Default):
         super().__init__()
         logging.debug(f"Created File Module with id {self.module_uid}.")
 
-    def create(self, uid: str):
-        """
-        Erstellt einen neuen Moduleintrag und speichert ihn im Dictionary.
-
-        :param uid: Die eindeutige ID des Eintrags.
-        :return: Der erstellte Moduleintrag.
-        """
-        module_entry: File.Entry = File.Entry(self, uid)
-        self.entrys[uid] = module_entry
-        return module_entry
-
     # noinspection PyMethodOverriding
     class Entry(Default.Entry):
         """
@@ -58,9 +47,11 @@ class File(Default):
             :param file: Die Datei, die gespeichert werden soll.
             :return: True, wenn der Job erfolgreich hinzugefügt wurde.
             """
-            util.save_file(file, self.uid)
-            database.add_job(self)
-            return True
+            if util.save_file(file, self.uid):
+                super().queuing(self)
+                logging.debug(f"Queued File Module entry with id {self.uid}.")
+                return True
+            return False
 
         def preprocessing(self) -> None:
             """

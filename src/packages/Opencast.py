@@ -31,19 +31,6 @@ class Opencast(Default):
         self.max_queue_length: int = max_queue_length
         logging.debug(f"Created Opencast Module with id {self.module_uid}.")
 
-    def create(self, uid: str, link: str, initial_prompt: str):
-        """
-        Erstellt einen neuen Opencast Moduleintrag.
-
-        :param uid: Die eindeutige ID des Eintrags.
-        :param link: Die URL zur Datei.
-        :param initial_prompt: Die initiale Beschreibung oder der Titel des Eintrags.
-        :return: Der erstellte Moduleintrag.
-        """
-        module_entry: Opencast.Entry = Opencast.Entry(self, uid, link, initial_prompt)
-        self.entrys[uid] = module_entry
-        return module_entry
-
     # noinspection PyMethodOverriding
     class Entry(Default.Entry):
         """
@@ -77,7 +64,8 @@ class Opencast(Default):
             :return: `True`, wenn der Job hinzugefügt wurde, `False`, wenn die Warteschlange voll ist.
             """
             if len(self.module.entrys) < self.module.max_queue_length:
-                database.add_job(self)
+                super().queuing(self)
+                logging.debug(f"Queued Opencast Module entry with id {self.uid}.")
                 return True
             return False
 
