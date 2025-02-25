@@ -91,6 +91,7 @@ class TsApi:
         """
         logging.info(f"Finished job with id {entry.uid}.")
         self.running_jobs.remove(entry)
+        del entry.module.entrys[entry.uid]
 
     # Thread to manage queue
     def start_thread(self) -> None:
