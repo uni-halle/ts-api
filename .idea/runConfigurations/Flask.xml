@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Flask" type="Python.FlaskServer">
-    <module name="ts-api-github" />
+    <module name="ts-api" />
     <option name="target" value="$PROJECT_DIR$/src/app.py" />
     <option name="targetType" value="PATH" />
     <option name="ENV_FILES" value="" />
