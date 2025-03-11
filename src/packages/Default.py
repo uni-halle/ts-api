@@ -2,9 +2,7 @@ import time
 import uuid
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any
-
-import database
+from typing import Dict, Any, overload
 
 
 # noinspection PyMethodOverriding
@@ -17,12 +15,17 @@ class Default(ABC):
     """
 
     @abstractmethod
-    def __init__(self) -> None:
+    def __init__(self, module_type: str = "Default.Default", module_uid: str
+     = str(uuid.uuid4()), entrys=None) -> \
+            None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem leeren Dictionary für Einträge.
         """
-        self.module_uid: str = str(uuid.uuid4())
-        self.entrys: Dict[str, Default.Entry] = {}
+        if entrys is None:
+            entrys = {}
+        self.module_type: str = module_type
+        self.module_uid: str = module_uid
+        self.entrys: Dict[str, Default.Entry] = entrys
 
     # noinspection PyMethodOverriding
     class Entry(ABC):
@@ -35,13 +38,15 @@ class Default(ABC):
         """
 
         @abstractmethod
-        def __init__(self, module, uid: str) -> None:
+        def __init__(self, module, uid: str, priority: int, time: float = time.time()) \
+                -> None:
             """
             Initialisiert einen neuen Moduleintrag und verknüpft ihn mit dem Modul.
 
             :param uid: Die eindeutige ID des Eintrags.
             """
-            self.time: float = time.time()
+            self.priority: int = priority
+            self.time: float = time
             self.module: Default = module
             self.uid: str = uid
 
@@ -52,15 +57,16 @@ class Default(ABC):
             return self.time > other.time
 
         def __eq__(self, other) -> bool:
-            return self.time == other.time
+            return self.uid == other.uid
 
         @abstractmethod
-        def queuing(self, entry) -> bool:
+        def queuing(self, ts_api) -> bool:
             """
             Abstrakte Methode zum queuen des Eintrags. Kann von Unterklassen implementiert werden.
+            :param ts_api: Die aktuelle TsAPI Instanz.
             """
-            self.module.entrys[entry.uid] = entry
-            database.add_job(entry)
+            self.module.entrys[self.uid] = self
+            ts_api.add_to_queue(self.priority, self)
             return True
 
         @abstractmethod

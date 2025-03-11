@@ -30,8 +30,12 @@ class TsApi:
         self.queue: PriorityQueue[(int, Default.Entry)] = database.load_queue()
         self.running_jobs: List[Default.Entry] = []
         # Load & Create Module
-        self.file_module = File()
-        self.modules: Dict[str, Default] = {"file": self.file_module}  # database.load_modules()
+        self.modules: Dict[str, Default] = database.load_modules()
+        if len(self.modules) == 0:
+            self.file_module = File(module_uid="DefaultFileModule")
+            self.modules["DefaultFileModule"] = self.file_module
+        else:
+            self.file_module = self.modules["DefaultFileModule"]
         # Load Whisper Model
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
@@ -49,7 +53,7 @@ class TsApi:
         """
         logging.info("Stopping TsAPI...")
         self.running = False
-        # database.save_modules(self.modules)
+        database.save_modules(self.modules)
         for module_entry in self.running_jobs:
             logging.info(f"Requeue job with id {module_entry.uid} because of shutdown.")
             database.change_job_status(module_entry, 1)  # Prepared
@@ -67,6 +71,7 @@ class TsApi:
         """
         logging.info(f"Adding job with id {module_entry.uid} to queue.")
         try:
+            database.add_job(module_entry)
             self.queue.put((priority, module_entry))
         except Exception as e:
             logging.error(f"Error adding job {module_entry.uid} to queue: {e}")

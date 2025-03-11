@@ -9,6 +9,8 @@ import database
 import util
 import requests
 from requests import request
+
+from TsApi import TsApi
 from packages.Default import Default
 
 # noinspection PyMethodOverriding
@@ -21,13 +23,14 @@ class Opencast(Default):
     :var max_queue_length: Maximale Anzahl von Einträgen in der Warteschlange.
     """
 
-    def __init__(self, max_queue_length: int) -> None:
+    def __init__(self, module_type: str = "File.File", max_queue_length: int
+    = 10, **kwargs) -> None:
         """
         Initialisiert ein Opencast-Modul mit einer maximalen Warteschlangenlänge.
 
         :param max_queue_length: Die maximale Anzahl an Jobs, die verarbeitet werden können.
         """
-        super().__init__()
+        super().__init__(module_type, **kwargs)
         self.max_queue_length: int = max_queue_length
         logging.debug(f"Created Opencast Module with id {self.module_uid}.")
 
@@ -42,7 +45,8 @@ class Opencast(Default):
         :var initial_prompt: Initiale Beschreibung oder Titel.
         """
 
-        def __init__(self, module, uid: str, link: str, initial_prompt: str) -> None:
+        def __init__(self, module, uid: str, link: str, initial_prompt: str
+        = "", priority: int = 1, **kwargs) -> None:
             """
             Initialisiert einen neuen Opencast Moduleintrag.
 
@@ -51,20 +55,21 @@ class Opencast(Default):
             :param link: Die URL zur Datei.
             :param initial_prompt: Die initiale Beschreibung oder der Titel des Eintrags.
             """
-            super().__init__(module, uid)
+            super().__init__(module, uid, priority, **kwargs)
             self.module: Opencast = module
             self.link: str = link
             self.initial_prompt: str = initial_prompt
             logging.debug(f"Created Opencast Module entry with id {self.uid}.")
 
-        def queuing(self) -> bool:
+        def queuing(self, ts_api: TsApi) -> bool:
             """
             Fügt einen Job zur Warteschlange hinzu, falls noch Platz vorhanden ist.
 
+            :param ts_api: Die aktuelle TsAPI Instanz.
             :return: `True`, wenn der Job hinzugefügt wurde, `False`, wenn die Warteschlange voll ist.
             """
             if len(self.module.entrys) < self.module.max_queue_length:
-                super().queuing(self)
+                super().queuing(ts_api)
                 logging.debug(f"Queued Opencast Module entry with id {self.uid}.")
                 return True
             return False

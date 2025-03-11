@@ -1,66 +1,73 @@
+import io
 import os.path
 import pytest
 import json
 from queue import PriorityQueue
 
+from Default import Default
+from File import File
 from utils import database
-
-
-def set_up_file() -> None:
-    job_data = {"id": "UID",
-                "module_id": None,
-                "status": 0}
-    with open("./data/jobDatabase/UID.json", "x") as file:
-        file.write(json.dumps(job_data))
-        file.close()
-
 
 class TestDatabase:
     @pytest.fixture(autouse=True)
     def set_up_tear_down(self):
-        yield
         if os.path.exists("./data/jobDatabase/UID.json"):
             os.remove("./data/jobDatabase/UID.json")
+        self.module: File = File()
+        self.module_entry: File.Entry = File.Entry(self.module, "UID", 1)
+        job_data: str = json.dumps(self.module_entry, default=lambda o:
+        o.__dict__)
+        with open("./data/jobDatabase/" + self.module_entry.uid + ".json",
+                  "x") as file:
+            file.write(job_data)
+            file.close()
+        yield
         if os.path.exists("./data/queue.json"):
             os.remove("./data/queue.json")
 
     def test_add_job(self):
-        database.add_job("UID", None)
+        if os.path.exists("./data/jobDatabase/UID.json"):
+            os.remove("./data/jobDatabase/UID.json")
+        database.add_job(self.module_entry)
         assert os.path.exists("./data/jobDatabase/UID.json")
         with open("./data/jobDatabase/UID.json", "r") as file:
             assert json.load(file) == {
-                "id": "UID",
-                "module_id": None,
-                "status": 0
+                "priority": 1,
+                "time": self.module_entry.time,
+                "module": {
+                    "module_type": self.module.module_type,
+                    "module_uid": self.module.module_uid,
+                    "entrys": self.module.entrys
+                },
+                "uid": "UID"
             }
             file.close()
 
     def test_load_job(self):
-        set_up_file()
-        assert database.load_job("UID") == {
-            "id": "UID",
-            "module_id": None,
-            "status": 0
+        job = database.load_job("UID")
+        assert job == {
+            "priority": self.module_entry.priority,
+            "time": self.module_entry.time,
+            "module":
+                {
+                    "module_type": self.module.module_type,
+                    "module_uid": self.module.module_uid,
+                    "entrys": self.module.entrys
+                 },
+            "uid": self.module_entry.uid
         }
 
     def test_exists_job(self):
-        set_up_file()
         assert database.exists_job("UID")
 
     def test_change_job_status(self):
-        set_up_file()
-        database.change_job_status("UID", 2)
+        database.change_job_status(self.module_entry, 2)
         with open("./data/jobDatabase/UID.json", "r") as file:
-            assert json.load(file) == {
-                "id": "UID",
-                "module_id": None,
-                "status": 2
-            }
+            assert json.load(file)["status"] == 2
             file.close()
 
     def test_set_whisper_result(self):
-        set_up_file()
-        database.set_whisper_result("UID",
+        database.set_whisper_result(self.module_entry,
                                     {"result": "This should be subtitled."})
         with open("./data/jobDatabase/UID.json", "r") as file:
             assert json.load(file)["whisper_result"] == {
@@ -69,31 +76,20 @@ class TestDatabase:
             file.close()
 
     def test_set_whisper_language(self):
-        set_up_file()
-        database.set_whisper_language("UID", "Klingonisch")
+        database.set_whisper_language(self.module_entry, "Klingonisch")
         with open("./data/jobDatabase/UID.json", "r") as file:
             assert json.load(file)["whisper_language"] == "Klingonisch"
             file.close()
 
-    def test_save_queue(self):
-        queue = PriorityQueue()
-        queue.put(("0", "UID"))
+    def test_save_and_load_queue(self):
+        queue: PriorityQueue[(int, Default.Entry)] = PriorityQueue()
+        queue.put(("0", self.module_entry))
         database.save_queue(queue)
         assert os.path.exists("./data/queue.json")
         with open("./data/queue.json", "r") as file:
-            assert json.load(file) == [['0', 'UID']]
+            second_queue = database.load_queue()
+            assert second_queue.queue == queue.queue
             file.close()
-
-    def test_load_queue_existing(self):
-        queue_insert = PriorityQueue()
-        queue_insert.put(("0", "UID"))
-        with open("./data/queue.json", "x") as file:
-            file.write(json.dumps(queue_insert.queue))
-            file.close()
-        queue = database.load_queue()
-        queue_test = PriorityQueue()
-        queue_test.put(("0", "UID"))
-        assert queue.queue == queue_test.queue
 
     def test_load_queue_empty(self):
         queue = database.load_queue()

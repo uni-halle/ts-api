@@ -1,8 +1,10 @@
 import json
 import logging
 import os
+from pydoc import locate
 
 from queue import PriorityQueue
+from typing import Dict
 
 from packages.Default import Default
 from utils import util
@@ -16,11 +18,9 @@ def add_job(module_entry: Default.Entry):
     :return: Nothing
     """
     logging.debug("Adding job with id " + module_entry.uid + " to database.")
-    job_data = {"id": module_entry.uid,
-                "module_id": module_entry.module.module_uid,
-                "status": 0}
+    job_data: str = json.dumps(module_entry, default=lambda o: o.__dict__)
     with open("./data/jobDatabase/" + module_entry.uid + ".json", "x") as file:
-        file.write(json.dumps(job_data))
+        file.write(job_data)
         file.close()
 
 
@@ -32,7 +32,9 @@ def load_job(uid: str):
     """
     logging.debug("Loading job with id " + uid + " from database.")
     with open("./data/jobDatabase/" + uid + ".json", "r") as file:
-        job_data = json.load(file)
+        job_data_raw = json.load(file)
+        job_data_type: type = job_data_raw["module"]["module_type"] + ".Entry"
+        job_data: job_data_type = job_data_raw
         return job_data
 
 
@@ -137,46 +139,45 @@ def save_queue(queue: PriorityQueue[(int, Default.Entry)]):
     logging.debug("Saving queue to database.")
     with open("./data/queue.json", "w+") as file:
         file.seek(0)
-        file.write(json.dumps(queue.queue))
+        file.write(json.dumps(queue.queue, default=lambda o: o.__dict__))
         file.truncate()
 
 
-# def save_module(modules: Dict[str, Default]):
-#     """
-#     Saves the given queue to the database
-#     :param modules: The queue to save
-#     :return: Nothing
-#     """
-#     logging.debug("Saving Modules to database.")
-#     for uid, module in modules.items():
-#         if len(module.entrys) == 0:
-#             if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
-#                 os.remove("./data/moduleDatabase/" + uid + ".json")
-#             continue
-#         with open("./data/moduleDatabase/" + uid + ".json",
-#                   "w+") as file:
-#             file.seek(0)
-#             file.write(json.dumps(module))
-#             file.truncate()
-#
-#
-# def load_modules():
-#     """
-#     Saves the given queue to the database
-#     :return: All used Opencast Modules
-#     """
-#     logging.debug("Loading Opencast Module from database.")
-#     modules: Dict[str, Default] = {}
-#     for file_name in os.listdir("./data/moduleDatabase"):
-#         if file_name.endswith(".json"):
-#             file_path = os.path.join("./data/moduleDatabase", file_name)
-#             with open(file_path, "r", encoding="utf-8") as file:
-#                 data = json.load(file)
-#             modules[data.get("uid")] = Opencast(
-#                 data.get("max_queue_entry"),
-#                 data.get("uid"), data.get(
-#                     "queue_entry"), data.get("link_list"))
-#    return modules
+def save_modules(modules: Dict[str, Default]):
+     """
+     Saves the given queue to the database
+     :param modules: The queue to save
+     :return: Nothing
+     """
+     logging.debug("Saving Modules to database.")
+     for uid, module in modules.items():
+        #if len(module.entrys) == 0:
+        #    if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
+        #        os.remove("./data/moduleDatabase/" + uid + ".json")
+        #    continue
+        with open("./data/moduleDatabase/" + uid + ".json",
+                  "w+") as file:
+            file.seek(0)
+            file.write(json.dumps(module, default=lambda o: o.__dict__))
+            file.truncate()
+
+
+def load_modules():
+    """
+    Saves the given queue to the database
+    :return: All used Opencast Modules
+    """
+    logging.debug("Loading Modules from database.")
+    modules: Dict[str, Default] = {}
+    for file_name in os.listdir("./data/moduleDatabase"):
+        if file_name.endswith(".json"):
+            file_path = os.path.join("./data/moduleDatabase", file_name)
+            with open(file_path, "r", encoding="utf-8") as file:
+                module_data_raw = json.load(file)
+                module_type: object = locate(module_data_raw["module_type"])
+                module: module_type = module_type(**module_data_raw)
+                modules[module.module_uid] = module
+    return modules
 
 
 def load_queue() -> PriorityQueue[(int, Default.Entry)]:
@@ -186,10 +187,24 @@ def load_queue() -> PriorityQueue[(int, Default.Entry)]:
     """
     logging.debug("Loading queue to database.")
     queue: PriorityQueue[(int, Default.Entry)] = PriorityQueue()
-    #if os.path.exists("./data/queue.json"):
-    #    with open("./data/queue.json", "r") as file:
-    #        queue_data = json.load(file)
-    #        while len(queue_data) > 0:
-    #            data = queue_data.pop()
-    #            queue.put((data[0], data[1]))
+    if os.path.exists("./data/queue.json"):
+        with (open("./data/queue.json", "r") as file):
+            queue_data = json.load(file)
+            while len(queue_data) > 0:
+                priority, job_data_raw = queue_data.pop()
+                # Get module and module entry type
+                module_type: object = locate(job_data_raw["module"][
+                                       "module_type"])
+                entry_type: object = locate(job_data_raw["module"][
+                                       "module_type"] + ".Entry")
+
+                # Dynamic rebuild module
+                module: module_type = module_type(**job_data_raw["module"])
+                job_data_raw["module"] = module
+
+                # Dynamic rebuild module entry
+                job_data: entry_type = entry_type(**job_data_raw)
+
+                # Rebuild queue
+                queue.put((priority, job_data))
     return queue

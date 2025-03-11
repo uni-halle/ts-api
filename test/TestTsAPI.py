@@ -1,39 +1,15 @@
-import io
 import os
-import json
-import pytest
-
-from werkzeug.datastructures import FileStorage
 
 from core.TsApi import TsApi
 
 
 class TestTsAPI:
-    @pytest.fixture(autouse=True)
-    def set_up_tear_down(self):
-        job_data = {"id": "UID",
-                    "module_id": None,
-                    "status": 0}
-        with open("./data/jobDatabase/UID.json", "x") as file:
-            file.write(json.dumps(job_data))
-            file.close()
-        file = FileStorage(
-            stream=io.BytesIO(bytes("Test", 'UTF-8')),
-            filename="1.txt"
-        )
-        file.save("./data/audioInput/UID")
-        yield
-        if os.path.exists("./data/jobDatabase/UID.json"):
-            os.remove("./data/jobDatabase/UID.json")
-        if os.path.exists("./data/audioInput/UID.txt"):
-            os.remove("./data/audioInput/UID.txt")
-        if os.path.exists("./data/jobDatabase/UID_2.json"):
-            os.remove("./data/jobDatabase/UID_2.json")
-        if os.path.exists("./data/audioInput/UID_2"):
-            os.remove("./data/audioInput/UID_2")
 
     def test_init(self):
         os.environ.setdefault("whisper_model", "small")
         ts_api: TsApi = TsApi()
         assert ts_api.running
         assert len(ts_api.running_jobs) == 0
+        assert ts_api.modules is not None
+        assert ts_api.queue is not None
+        assert ts_api.file_module is not None
