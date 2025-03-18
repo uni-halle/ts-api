@@ -1,11 +1,10 @@
 import logging
 
-from typing_extensions import overload
 from werkzeug.datastructures import FileStorage
 
-import database
 import util
 from Default import Default
+
 
 # noinspection PyMethodOverriding
 class File(Default):
@@ -18,7 +17,8 @@ class File(Default):
 
     def __init__(self, module_type: str = "File.File", **kwargs) -> None:
         """
-        Initialisiert ein Default-Modul mit einer eindeutigen ID und einem leeren Dictionary für Einträge.
+        Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
+        leeren Dictionary für Einträge.
         """
         super().__init__(module_type, **kwargs)
         logging.debug(f"Created File Module with id {self.module_uid}.")
@@ -57,7 +57,7 @@ class File(Default):
 
         def preprocessing(self) -> None:
             """
-            Abstrakte Methode zur Vorverarbeitung von Daten. Wird hier nicht benötigt.
+            Abstrakte Methode zur Vorverarbeitung von Daten.
+            Wird hier nicht benötigt.
             """
             pass
-

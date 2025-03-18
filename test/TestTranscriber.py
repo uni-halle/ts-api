@@ -1,9 +1,7 @@
-import io
 import os
 import json
 
 import pytest
-from werkzeug.datastructures import FileStorage
 
 from File import File
 from core.Transcriber import Transcriber
@@ -18,7 +16,7 @@ class TestTranscriber:
         self.module: File = File()
         self.module_entry: File.Entry = File.Entry(self.module, "UID", 1)
         job_data: str = json.dumps(self.module_entry, default=lambda o:
-        o.__dict__)
+                                   o.__dict__)
         with open("./data/jobDatabase/" + self.module_entry.uid + ".json",
                   "x") as file:
             file.write(job_data)

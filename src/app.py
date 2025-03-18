@@ -81,7 +81,8 @@ def transcribe_post():
     # Old File.py upload
     if 'file' in request.files:
         file: FileStorage = request.files['file']
-        module_entry: File.Entry = File.Entry(ts_api.file_module, uid, int(priority))
+        module_entry: File.Entry = File.Entry(ts_api.file_module, uid,
+                                              int(priority))
         module_entry.queuing(ts_api, file)
         return {"jobId": uid}, 201
     # Insert modules here
@@ -89,7 +90,8 @@ def transcribe_post():
         if module == "opencast" and title and link:
             if module_id in ts_api.modules:
                 module: Default = ts_api.modules[module_id]
-                module_entry: Opencast.Entry = Opencast.Entry(module, uid, link, title)
+                module_entry: Opencast.Entry = Opencast.Entry(module, uid,
+                                                              link, title)
                 if module_entry.queuing(ts_api):
                     return {"jobId": uid}, 201
                 else:

@@ -34,8 +34,6 @@ def save_file(file: FileStorage, uid: str) -> bool:
         return False
 
 
-
-
 # Helper
 def get_status(status_id: int):
     """

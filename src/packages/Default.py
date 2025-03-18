@@ -2,7 +2,7 @@ import time
 import uuid
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, overload
+from typing import Dict
 
 
 # noinspection PyMethodOverriding
@@ -15,11 +15,11 @@ class Default(ABC):
     """
 
     @abstractmethod
-    def __init__(self, module_type: str = "Default.Default", module_uid: str
-     = str(uuid.uuid4()), entrys=None) -> \
-            None:
+    def __init__(self, module_type: str = "Default.Default", module_uid:
+                 str = str(uuid.uuid4()), entrys=None) -> None:
         """
-        Initialisiert ein Default-Modul mit einer eindeutigen ID und einem leeren Dictionary für Einträge.
+        Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
+        leeren Dictionary für Einträge.
         """
         if entrys is None:
             entrys = {}
@@ -38,10 +38,11 @@ class Default(ABC):
         """
 
         @abstractmethod
-        def __init__(self, module, uid: str, priority: int, time: float = time.time()) \
-                -> None:
+        def __init__(self, module, uid: str, priority: int, time: float =
+                     time.time()) -> None:
             """
-            Initialisiert einen neuen Moduleintrag und verknüpft ihn mit dem Modul.
+            Initialisiert einen neuen Moduleintrag und
+            verknüpft ihn mit dem Modul.
 
             :param uid: Die eindeutige ID des Eintrags.
             """
@@ -62,7 +63,8 @@ class Default(ABC):
         @abstractmethod
         def queuing(self, ts_api) -> bool:
             """
-            Abstrakte Methode zum queuen des Eintrags. Kann von Unterklassen implementiert werden.
+            Abstrakte Methode zum queuen des Eintrags.
+            Kann von Unterklassen implementiert werden.
             :param ts_api: Die aktuelle TsAPI Instanz.
             """
             self.module.entrys[self.uid] = self
@@ -72,6 +74,7 @@ class Default(ABC):
         @abstractmethod
         def preprocessing(self) -> None:
             """
-            Abstrakte Methode zur Vorverarbeitung von Daten. Kann von Unterklassen implementiert werden.
+            Abstrakte Methode zur Vorverarbeitung von Daten.
+            Kann von Unterklassen implementiert werden.
             """
             pass

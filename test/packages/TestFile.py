@@ -1,13 +1,12 @@
 import io
 import os.path
-from tkinter.tix import FileEntry
 
 import pytest
-from dotenv import load_dotenv
 from werkzeug.datastructures import FileStorage
 
 from TsApi import TsApi
 from packages.File import File
+
 
 class TestUtil:
     @pytest.fixture(autouse=True)
@@ -29,7 +28,8 @@ class TestUtil:
 
     def test_entry_creation(self):
         module: File = File()
-        module_entry: File.Entry = File.Entry(module=module, uid="UID", priority=1)
+        module_entry: File.Entry = File.Entry(module=module, uid="UID",
+                                              priority=1)
         assert module_entry.queuing(self.ts_api, self.file) is True
         assert module_entry.module is not None
         assert module_entry.uid is not None

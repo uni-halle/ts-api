@@ -1,11 +1,9 @@
-import io
 import os.path
 import pytest
-from dotenv import load_dotenv
-from werkzeug.datastructures import FileStorage
 
 from TsApi import TsApi
 from packages.Opencast import Opencast
+
 
 class TestUtil:
     @pytest.fixture(autouse=True)
@@ -17,10 +15,10 @@ class TestUtil:
             os.remove("./data/jobDatabase/UID.json")
 
     def test_module_creation(self):
-        module: Opencast= Opencast(max_queue_length=2)
+        module: Opencast = Opencast(max_queue_length=2)
         assert module.module_uid is not None
         assert module.entrys is not None
-        assert module.max_queue_length is 2
+        assert module.max_queue_length == 2
 
     def test_entry_creation(self):
         module: Opencast = Opencast(max_queue_length=2)

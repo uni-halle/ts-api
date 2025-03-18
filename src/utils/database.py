@@ -101,8 +101,8 @@ def set_whisper_language(module_entry: Default.Entry, whisper_language: str):
     :param whisper_language: The language to set
     :return: Nothing
     """
-    logging.debug("Adding whisper language to job with id " +
-                  module_entry.uid + ".")
+    logging.debug("Adding whisper language to job with id "
+                  + module_entry.uid + ".")
     with (open("./data/jobDatabase/" + module_entry.uid + ".json", "r+") as
           file):
         job_data = json.load(file)
@@ -144,14 +144,14 @@ def save_queue(queue: PriorityQueue[(int, Default.Entry)]):
 
 
 def save_modules(modules: Dict[str, Default]):
-     """
-     Saves the given queue to the database
-     :param modules: The queue to save
-     :return: Nothing
-     """
-     logging.debug("Saving Modules to database.")
-     for uid, module in modules.items():
-        #if len(module.entrys) == 0:
+    """
+    Saves the given queue to the database
+    :param modules: The queue to save
+    :return: Nothing
+    """
+    logging.debug("Saving Modules to database.")
+    for uid, module in modules.items():
+        # if len(module.entrys) == 0:
         #    if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
         #        os.remove("./data/moduleDatabase/" + uid + ".json")
         #    continue
@@ -194,9 +194,9 @@ def load_queue() -> PriorityQueue[(int, Default.Entry)]:
                 priority, job_data_raw = queue_data.pop()
                 # Get module and module entry type
                 module_type: object = locate(job_data_raw["module"][
-                                       "module_type"])
+                                             "module_type"])
                 entry_type: object = locate(job_data_raw["module"][
-                                       "module_type"] + ".Entry")
+                                            "module_type"] + ".Entry")
 
                 # Dynamic rebuild module
                 module: module_type = module_type(**job_data_raw["module"])

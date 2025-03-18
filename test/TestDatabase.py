@@ -1,4 +1,3 @@
-import io
 import os.path
 import pytest
 import json
@@ -8,6 +7,7 @@ from Default import Default
 from File import File
 from utils import database
 
+
 class TestDatabase:
     @pytest.fixture(autouse=True)
     def set_up_tear_down(self):
@@ -16,7 +16,7 @@ class TestDatabase:
         self.module: File = File()
         self.module_entry: File.Entry = File.Entry(self.module, "UID", 1)
         job_data: str = json.dumps(self.module_entry, default=lambda o:
-        o.__dict__)
+                                   o.__dict__)
         with open("./data/jobDatabase/" + self.module_entry.uid + ".json",
                   "x") as file:
             file.write(job_data)
@@ -53,7 +53,7 @@ class TestDatabase:
                     "module_type": self.module.module_type,
                     "module_uid": self.module.module_uid,
                     "entrys": self.module.entrys
-                 },
+                },
             "uid": self.module_entry.uid
         }
 

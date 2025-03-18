@@ -20,7 +20,8 @@ class TsApi:
         """
         Initialisiert die TsAPI-Klasse und startet den Dienst.
 
-        Initialisiert die Warteschlange und laufende Jobs, lädt das Whisper-Modell und richtet Signalhandler für das Herunterfahren ein.
+        Initialisiert die Warteschlange und laufende Jobs, lädt das
+        Whisper-Modell und richtet Signalhandler für das Herunterfahren ein.
         """
         logging.info("Starting TsAPI...")
         # Shutdown Handling
@@ -49,13 +50,15 @@ class TsApi:
         """
         Beendet TsAPI und speichert die aktuelle Warteschlange.
 
-        Läuft bei einem Beenden-Signal und sichert laufende Jobs erneut in die Warteschlange.
+        Läuft bei einem Beenden-Signal und sichert laufende Jobs erneut in
+        die Warteschlange.
         """
         logging.info("Stopping TsAPI...")
         self.running = False
         database.save_modules(self.modules)
         for module_entry in self.running_jobs:
-            logging.info(f"Requeue job with id {module_entry.uid} because of shutdown.")
+            logging.info(f"Requeue job with id {module_entry.uid}"
+                         + " because of shutdown.")
             database.change_job_status(module_entry, 1)  # Prepared
             self.add_to_queue(0, module_entry)
         database.save_queue(self.queue)
@@ -67,7 +70,8 @@ class TsApi:
         Fügt einen Job zur Warteschlange hinzu.
 
         :param priority: Die Priorität des Jobs.
-        :param module_entry: Der Eintrag, der zur Warteschlange hinzugefügt werden soll.
+        :param module_entry: Der Eintrag, der zur Warteschlange hinzugefügt
+        werden soll.
         """
         logging.info(f"Adding job with id {module_entry.uid} to queue.")
         try:
@@ -108,21 +112,26 @@ class TsApi:
 
     def ts_api_thread(self) -> None:
         """
-        Verarbeitet die Warteschlange und startet neue Jobs, wenn Ressourcen verfügbar sind.
+        Verarbeitet die Warteschlange und startet neue Jobs, wenn Ressourcen
+        verfügbar sind.
 
-        Läuft in einem separaten Thread und verarbeitet die Warteschlange, indem es Jobs je nach Verfügbarkeit ausführt.
+        Läuft in einem separaten Thread und verarbeitet die Warteschlange,
+        indem es Jobs je nach Verfügbarkeit ausführt.
         """
         while self.running:
             parallel_worker = int(os.environ.get("parallel_workers"))
             if len(self.running_jobs) < parallel_worker:
                 if not self.queue.empty():
                     try:
-                        module_entry: Default.Entry = self.queue.get(timeout=1)[1]
+                        module_entry: Default.Entry = self.queue.get(
+                            timeout=1)[1]
                         self.running_jobs.append(module_entry)
                         # Preparing
-                        logging.info(f"Started preparing job with id {module_entry.uid}.")
+                        logging.info(f"Started preparing job with id"
+                                     f" {module_entry.uid}.")
                         module_entry.preprocessing()
-                        logging.info(f"Finished preparing job with id {module_entry.uid}.")
+                        logging.info(f"Finished preparing job with id"
+                                     f" {module_entry.uid}.")
                         database.change_job_status(module_entry, 1)  # Prepared
                         # Whispering
                         trans: Transcriber = self.register_job(module_entry)
