@@ -8,6 +8,7 @@ from typing import Dict
 
 from packages.Default import Default
 
+
 class Database:
     modules: [str, Default] = {}
     module_entrys: [str, Default.Entry] = {}
