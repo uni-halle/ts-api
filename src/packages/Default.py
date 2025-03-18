@@ -2,7 +2,6 @@ import time
 import uuid
 
 from abc import ABC, abstractmethod
-from typing import Dict
 
 
 # noinspection PyMethodOverriding
@@ -22,23 +21,24 @@ class Default(ABC):
         leeren Dictionary für Einträge.
         """
         if entrys is None:
-            entrys = {}
+            entrys = []
         self.module_type: str = module_type
         self.module_uid: str = module_uid
-        self.entrys: Dict[str, Default.Entry] = entrys
+        self.entrys: [str] = entrys
 
     # noinspection PyMethodOverriding
     class Entry(ABC):
         """
         Abstrakte Basisklasse für Moduleinträge.
 
-        :var time: Die erstellungs Zeit
+        :var time: Die Erstellung Zeit
         :var module: Die zugehörige Modulinstanz.
         :var uid: Die eindeutige ID des Eintrags.
         """
 
         @abstractmethod
-        def __init__(self, module, uid: str, priority: int, time: float =
+        def __init__(self, module, uid: str, priority: int,
+                     time: float =
                      time.time()) -> None:
             """
             Initialisiert einen neuen Moduleintrag und
@@ -67,7 +67,7 @@ class Default(ABC):
             Kann von Unterklassen implementiert werden.
             :param ts_api: Die aktuelle TsAPI Instanz.
             """
-            self.module.entrys[self.uid] = self
+            self.module.entrys.append(self.uid)
             ts_api.add_to_queue(self.priority, self)
             return True
 
