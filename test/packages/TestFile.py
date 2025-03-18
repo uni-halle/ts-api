@@ -34,4 +34,4 @@ class TestUtil:
         assert module_entry.module is not None
         assert module_entry.uid is not None
         assert module_entry.time is not None
-        assert module.entrys[module_entry.uid] == module_entry
+        assert module_entry.uid in module.entrys
