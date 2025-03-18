@@ -75,7 +75,7 @@ def transcribe_post():
     if cpu_usage > 400:
         return {"error": "Not enough cpu"}, 507
 
-    if ts_api.queue.qsize() > 50:
+    if ts_api.database.queue.qsize() > 50:
         return {"error": "The queue is full"}, 507
 
     # Old File.py upload
@@ -88,8 +88,8 @@ def transcribe_post():
     # Insert modules here
     elif module and module_id:
         if module == "opencast" and title and link:
-            if module_id in ts_api.modules:
-                module: Default = ts_api.modules[module_id]
+            if module_id in ts_api.database.modules:
+                module: Default = ts_api.database.modules[module_id]
                 module_entry: Opencast.Entry = Opencast.Entry(module, uid,
                                                               link, title)
                 if module_entry.queuing(ts_api):
@@ -111,8 +111,8 @@ def transcribe_get():
     req_id = request.args.get("id")
     output_format = request.args.get("format")
     output_formats = ["vtt", "srt", "txt", "json", "tsv"]
-    if database.exists_job(req_id):
-        job_data = database.load_job(req_id)
+    if ts_api.database.exists_job(req_id):
+        job_data = ts_api.database.load_job(req_id)
         if job_data["status"] >= 2:  # Whispered
             if output_format in output_formats:
                 writers = {
@@ -151,10 +151,10 @@ def transcribe_delete():
     :return: HttpResponse
     """
     req_id = request.args.get("id")
-    if database.exists_job(req_id):
-        job_data = database.load_job(req_id)
+    if ts_api.database.exists_job(req_id):
+        job_data = ts_api.database.load_job(req_id)
         if job_data["status"] <= 1 or job_data["status"] >= 2:
-            database.delete_job(req_id)
+            ts_api.database.delete_job(req_id)
             return "OK", 200
         else:
             return {"error": "Job currently processing"}, 200
@@ -169,11 +169,11 @@ def module_opencast_post():
     Endpoint to accept videos and links to whisper
     :return: HttpResponse
     """
-    max_queue_length: int = int(request.form.get("max_queue_length"))
+    max_queue_length: str = request.form.get("max_queue_length")
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
     module: Opencast = Opencast(max_queue_length)
-    ts_api.modules[module.module_uid] = module
+    ts_api.database.modules[module.module_uid] = module
     return {"moduleId": module.module_uid}, 201
 
 
@@ -185,8 +185,8 @@ def status():
     :return: HttpResponse
     """
     req_id = request.args.get("id")
-    if database.exists_job(req_id):
-        job_data = database.load_job(req_id)
+    if ts_api.database.exists_job(req_id):
+        job_data = ts_api.database.load_job(req_id)
         return {"jobId": req_id,
                 "status": util.get_status(job_data["status"])}, 200
     else:
@@ -212,7 +212,7 @@ def system_status():
         "swap_usage": round(psutil.swap_memory().percent, 1),
         "swap_free": round(psutil.swap_memory().free
                            * 100 / psutil.swap_memory().total, 1),
-        "queue_length": ts_api.queue.qsize(),
+        "queue_length": ts_api.database.queue.qsize(),
         "running_jobs": len(ts_api.running_jobs),
         "parallel_jobs": int(os.environ.get("parallel_workers"))
     }, 200
@@ -237,8 +237,8 @@ def language_get():
     :return: HttpResponse
     """
     req_id = request.args.get("id")
-    if database.exists_job(req_id):
-        job_data = database.load_job(req_id)
+    if ts_api.database.exists_job(req_id):
+        job_data = ts_api.database.load_job(req_id)
         if "whisper_language" in job_data:
             return {"jobId": req_id,
                     "language": job_data["whisper_language"]}, 200
@@ -255,8 +255,8 @@ def model_get():
     :return: HttpResponse
     """
     req_id = request.args.get("id")
-    if database.exists_job(req_id):
-        job_data = database.load_job(req_id)
+    if ts_api.database.exists_job(req_id):
+        job_data = ts_api.database.load_job(req_id)
         if "whisper_model" in job_data:  # Whispered
             return {"jobId": req_id,
                     "model": job_data["whisper_model"]}, 200

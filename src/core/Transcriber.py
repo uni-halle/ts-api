@@ -43,7 +43,9 @@ class Transcriber:
             model_size = os.environ.get("whisper_model")
             model = whisper.load_model(model_size,
                                        download_root="./data/models")
-            database.set_whisper_model(self.module_entry, model_size)
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+                                                  "whisper_model",
+                                                   model_size)
             # Load audio
             audio = whisper.load_audio(self.file_path)
             short_audio = whisper.pad_or_trim(audio)
@@ -52,9 +54,11 @@ class Transcriber:
                    .to(model.device).to(torch.float32))
             _, probs = model.detect_language(mel)
             self.whisper_language = str(max(probs, key=probs.get))
-            database.set_whisper_language(self.module_entry,
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+                                                  "whisper_language",
                                           str(max(probs, key=probs.get)))
-            database.change_job_status(self.module_entry,
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+            "status",
                                        2)  # processed
 
             logging.info("Finished processing for job with id "
@@ -75,8 +79,11 @@ class Transcriber:
                                         fp16=False)
             # Store results
             self.whisper_result = result
-            database.set_whisper_result(self.module_entry, result)
-            database.change_job_status(self.module_entry, 3)  # Whispered
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+                                                  "whisper_result", result)
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+                                                  "status",
+                                                  3)  # Whispered
             os.remove(self.file_path)
             logging.debug("Finished Whisper for job with id "
                           + self.module_entry.uid + "!")
@@ -84,5 +91,7 @@ class Transcriber:
         except Exception as e:
             os.remove(self.file_path)
             logging.error(e)
-            database.change_job_status(self.module_entry, 4)  # Failed
+            self.ts_api.database.change_job_entry(self.module_entry.uid,
+            "status",
+                                                  4)  # Failed
             self.ts_api.unregister_job(self.module_entry)

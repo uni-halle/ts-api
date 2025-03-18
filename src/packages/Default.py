@@ -39,7 +39,10 @@ class Default(ABC):
         @abstractmethod
         def __init__(self, module, uid: str, priority: int,
                      time: float =
-                     time.time()) -> None:
+                     time.time(), status: int | None = None, whisper_result:
+                    str | None = None,
+                     whisper_language: str | None = None, whisper_model: str
+                    | None = None) -> None:
             """
             Initialisiert einen neuen Moduleintrag und
             verknüpft ihn mit dem Modul.
@@ -50,6 +53,10 @@ class Default(ABC):
             self.time: float = time
             self.module: Default = module
             self.uid: str = uid
+            self.status: int | None = status
+            self.whisper_result: int | None = whisper_result
+            self.whisper_language: str | None = whisper_language
+            self.whisper_model: str | None = whisper_model
 
         def __lt__(self, other) -> bool:
             return self.time < other.time
@@ -67,7 +74,6 @@ class Default(ABC):
             Kann von Unterklassen implementiert werden.
             :param ts_api: Die aktuelle TsAPI Instanz.
             """
-            self.module.entrys.append(self.uid)
             ts_api.add_to_queue(self.priority, self)
             return True
 

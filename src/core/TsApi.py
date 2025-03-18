@@ -11,7 +11,7 @@ import whisper
 from packages.File import File
 from core.Transcriber import Transcriber
 from packages.Default import Default
-from utils import database
+from utils.database import Database
 
 
 class TsApi:
@@ -27,16 +27,16 @@ class TsApi:
         # Shutdown Handling
         signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
+        # Creating/Loading Database
+        self.database = Database()
         # Queue and Running Jobs
-        self.queue: PriorityQueue[(int, Default.Entry)] = database.load_queue()
         self.running_jobs: List[Default.Entry] = []
         # Load & Create Module
-        self.modules: Dict[str, Default] = database.load_modules()
-        if len(self.modules) == 0:
+        if len(self.database.modules) == 0:
             self.file_module = File(module_uid="DefaultFileModule")
-            self.modules["DefaultFileModule"] = self.file_module
+            self.database.modules["DefaultFileModule"] = self.file_module
         else:
-            self.file_module = self.modules["DefaultFileModule"]
+            self.file_module = self.database.modules["DefaultFileModule"]
         # Load Whisper Model
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
@@ -55,13 +55,14 @@ class TsApi:
         """
         logging.info("Stopping TsAPI...")
         self.running = False
-        database.save_modules(self.modules)
         for module_entry in self.running_jobs:
             logging.info(f"Requeue job with id {module_entry.uid}"
                          + " because of shutdown.")
-            database.change_job_status(module_entry, 1)  # Prepared
-            self.add_to_queue(0, module_entry)
-        database.save_queue(self.queue)
+            self.database.change_job_entry(module_entry.uid,
+                                            "status", 0)  # Queued
+            module_entry.priority = 0
+            self.database.queue.put((module_entry.priority, module_entry))
+        self.database.save_database()
         logging.info("TsAPI stopped!")
         os.kill(os.getpid(), signal.SIGKILL)
 
@@ -75,8 +76,9 @@ class TsApi:
         """
         logging.info(f"Adding job with id {module_entry.uid} to queue.")
         try:
-            database.add_job(module_entry)
-            self.queue.put((priority, module_entry))
+            self.database.add_job(module_entry)
+            self.database.change_job_entry(module_entry.uid, "status", 0)
+            self.database.queue.put((priority, module_entry))
         except Exception as e:
             logging.error(f"Error adding job {module_entry.uid} to queue: {e}")
 
@@ -100,7 +102,6 @@ class TsApi:
         """
         logging.info(f"Finished job with id {entry.uid}.")
         self.running_jobs.remove(entry)
-        del entry.module.entrys[entry.uid]
 
     # Thread to manage queue
     def start_thread(self) -> None:
@@ -121,9 +122,9 @@ class TsApi:
         while self.running:
             parallel_worker = int(os.environ.get("parallel_workers"))
             if len(self.running_jobs) < parallel_worker:
-                if not self.queue.empty():
+                if not self.database.queue.empty():
                     try:
-                        module_entry: Default.Entry = self.queue.get(
+                        module_entry: Default.Entry = self.database.queue.get(
                             timeout=1)[1]
                         self.running_jobs.append(module_entry)
                         # Preparing
@@ -132,11 +133,13 @@ class TsApi:
                         module_entry.preprocessing()
                         logging.info(f"Finished preparing job with id"
                                      f" {module_entry.uid}.")
-                        database.change_job_status(module_entry, 1)  # Prepared
+                        self.database.change_job_entry(module_entry.uid, "status",
+                                                    1)  # Prepared
                         # Whispering
                         trans: Transcriber = self.register_job(module_entry)
                         trans.start_thread()
                     except Exception as e:
                         logging.error(f"Error processing job: {e}")
-                        database.change_job_status(module_entry, 5)  # Canceled
+                        self.database.change_job_entry(module_entry.uid, "status",
+                                                    5)  # Canceled
             time.sleep(5)
