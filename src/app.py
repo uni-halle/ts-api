@@ -9,7 +9,7 @@ import whisper.utils
 from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage, Authorization
 
-from File import File
+from packages.File import File
 from packages.Opencast import Opencast
 from packages.Default import Default
 from utils import util

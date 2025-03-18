@@ -1,7 +1,7 @@
 import os.path
 import pytest
 
-from TsApi import TsApi
+from core.TsApi import TsApi
 from packages.Opencast import Opencast
 
 

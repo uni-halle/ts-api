@@ -4,7 +4,7 @@ import os.path
 import pytest
 from werkzeug.datastructures import FileStorage
 
-from TsApi import TsApi
+from core.TsApi import TsApi
 from packages.File import File
 
 

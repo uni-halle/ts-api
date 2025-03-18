@@ -2,8 +2,8 @@ import logging
 
 from werkzeug.datastructures import FileStorage
 
-import util
-from Default import Default
+import utils
+from packages.Default import Default
 
 
 # noinspection PyMethodOverriding
@@ -49,7 +49,7 @@ class File(Default):
             :param file: Die Datei, die gespeichert werden soll.
             :return: True, wenn der Job erfolgreich hinzugefügt wurde.
             """
-            if util.save_file(file, self.uid):
+            if utils.util.save_file(file, self.uid):
                 super().queuing(ts_api)
                 logging.debug(f"Queued File Module entry with id {self.uid}.")
                 return True

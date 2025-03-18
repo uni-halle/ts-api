@@ -3,11 +3,11 @@ import io
 
 from werkzeug.datastructures import FileStorage
 
-import util
+import utils
 import requests
 from requests import request
 
-from TsApi import TsApi
+from core.TsApi import TsApi
 from packages.Default import Default
 
 
@@ -97,5 +97,5 @@ class Opencast(Default):
                 content_length=response.headers.get("Content-Length"),
                 content_type=response.headers.get("Content-Type")
             )
-            util.save_file(file, self.uid)
+            utils.util.save_file(file, self.uid)
             logging.debug(f"Downloaded file for job id {self.uid}.")

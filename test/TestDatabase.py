@@ -1,6 +1,6 @@
 import os.path
 import pytest
-from File import File
+from packages.File import File
 from utils.database import Database
 
 
@@ -17,6 +17,8 @@ class TestDatabase:
             os.remove("./data/queue.json")
         if os.path.exists("./data/audioInput/UID"):
             os.remove("./data/audioInput/UID")
+        if os.path.exists("./data/jobDatabase/UID"):
+            os.remove("./data/jobDatabase/UID")
 
     def test_add_job(self):
         self.database.add_job(self.module_entry)
