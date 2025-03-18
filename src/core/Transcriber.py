@@ -5,7 +5,6 @@ import os
 import torch
 
 from packages.Default import Default
-from utils import database
 import whisper
 
 
@@ -45,7 +44,7 @@ class Transcriber:
                                        download_root="./data/models")
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_model",
-                                                   model_size)
+                                                  model_size)
             # Load audio
             audio = whisper.load_audio(self.file_path)
             short_audio = whisper.pad_or_trim(audio)
@@ -56,10 +55,11 @@ class Transcriber:
             self.whisper_language = str(max(probs, key=probs.get))
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_language",
-                                          str(max(probs, key=probs.get)))
+                                                  str(max(probs,
+                                                          key=probs.get)))
             self.ts_api.database.change_job_entry(self.module_entry.uid,
-            "status",
-                                       2)  # processed
+                                                  "status",
+                                                  2)  # processed
 
             logging.info("Finished processing for job with id "
                          + self.module_entry.uid + "!")
@@ -92,6 +92,5 @@ class Transcriber:
             os.remove(self.file_path)
             logging.error(e)
             self.ts_api.database.change_job_entry(self.module_entry.uid,
-            "status",
-                                                  4)  # Failed
+                                                  "status", 4)  # Failed
             self.ts_api.unregister_job(self.module_entry)

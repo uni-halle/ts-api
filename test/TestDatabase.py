@@ -1,9 +1,5 @@
 import os.path
 import pytest
-import json
-from queue import PriorityQueue
-
-from Default import Default
 from File import File
 from utils.database import Database
 
@@ -24,7 +20,8 @@ class TestDatabase:
 
     def test_add_job(self):
         self.database.add_job(self.module_entry)
-        assert self.database.load_job(self.module_entry.uid) == self.module_entry
+        assert (self.database.load_job(self.module_entry.uid)
+                == self.module_entry)
 
     def test_load_job(self):
         job = self.database.load_job("UID")
@@ -39,12 +36,12 @@ class TestDatabase:
 
     def test_set_whisper_result(self):
         self.database.change_job_entry(self.module_entry.uid, "whisper_result",
-                                    {"result": "This should be subtitled."})
-        assert self.database.load_job(self.module_entry.uid).whisper_result == {"result": "This should be subtitled."}
+                                       {"result": "This should be subtitled."})
+        assert (self.database.load_job(self.module_entry.uid).whisper_result
+                == {"result": "This should be subtitled."})
 
     def test_set_whisper_language(self):
         self.database.change_job_entry(self.module_entry.uid,
                                        "whisper_language", "Klingonisch")
         assert self.database.load_job(
             self.module_entry.uid).whisper_language == "Klingonisch"
-

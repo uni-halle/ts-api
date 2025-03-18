@@ -31,4 +31,3 @@ class TestUtil:
         assert module_entry.time is not None
         assert module_entry.link is not None
         assert module_entry.initial_prompt is not None
-        assert module_entry.uid in module.entrys

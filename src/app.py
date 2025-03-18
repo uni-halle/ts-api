@@ -12,7 +12,7 @@ from werkzeug.datastructures import FileStorage, Authorization
 from File import File
 from packages.Opencast import Opencast
 from packages.Default import Default
-from utils import database, util
+from utils import util
 from core.TsApi import TsApi
 from dotenv import load_dotenv
 

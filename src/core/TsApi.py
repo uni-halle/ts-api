@@ -3,8 +3,7 @@ import os
 import signal
 import threading
 import time
-from queue import PriorityQueue
-from typing import List, Dict
+from typing import List
 
 import whisper
 
@@ -58,8 +57,8 @@ class TsApi:
         for module_entry in self.running_jobs:
             logging.info(f"Requeue job with id {module_entry.uid}"
                          + " because of shutdown.")
-            self.database.change_job_entry(module_entry.uid,
-                                            "status", 0)  # Queued
+            self.database.change_job_entry(module_entry.uid, "status",
+                                           0)  # Queued
             module_entry.priority = 0
             self.database.queue.put((module_entry.priority, module_entry))
         self.database.save_database()
@@ -133,13 +132,13 @@ class TsApi:
                         module_entry.preprocessing()
                         logging.info(f"Finished preparing job with id"
                                      f" {module_entry.uid}.")
-                        self.database.change_job_entry(module_entry.uid, "status",
-                                                    1)  # Prepared
+                        self.database.change_job_entry(module_entry.uid,
+                                                       "status", 1)  # Prepared
                         # Whispering
                         trans: Transcriber = self.register_job(module_entry)
                         trans.start_thread()
                     except Exception as e:
                         logging.error(f"Error processing job: {e}")
-                        self.database.change_job_entry(module_entry.uid, "status",
-                                                    5)  # Canceled
+                        self.database.change_job_entry(module_entry.uid,
+                                                       "status", 5)  # Canceled
             time.sleep(5)

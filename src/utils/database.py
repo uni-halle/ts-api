@@ -7,7 +7,7 @@ from queue import PriorityQueue
 from typing import Dict
 
 from packages.Default import Default
-from utils import util
+
 
 class Database:
     modules: [str, Default] = {}
@@ -37,7 +37,8 @@ class Database:
                     # Rebuild module_entry
                     module_entry_data_raw = json.load(file)
                     module_entry_type: object = locate(
-                        module_entry_data_raw["module"]["module_type"] + ".Entry")
+                        module_entry_data_raw["module"]["module_type"]
+                        + ".Entry")
                     module_entry: module_entry_type = module_entry_type(
                         **module_entry_data_raw)
                     # Find module and insert link
@@ -77,10 +78,11 @@ class Database:
         try:
             logging.debug("Saving modules to database.")
             for uid, module in self.modules.items():
-                # if len(module.entrys) == 0:
-                #    if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
-                #        os.remove("./data/moduleDatabase/" + uid + ".json")
-                #    continue
+                if len(module.entrys) == 0:
+                    if os.path.exists("./data/moduleDatabase/"
+                                      + uid + ".json"):
+                        os.remove("./data/moduleDatabase/" + uid + ".json")
+                    continue
                 with open("./data/moduleDatabase/" + uid + ".json",
                           "w+") as file:
                     file.seek(0)
@@ -108,8 +110,8 @@ class Database:
             logging.debug("Saving queue to database.")
             with open("./data/queue.json", "w+") as file:
                 file.seek(0)
-                file.write(json.dumps(self.queue.queue, default=lambda o:
-                o.__dict__))
+                file.write(json.dumps(
+                    self.queue.queue, default=lambda o: o.__dict__))
                 file.truncate()
         except Exception as e:
             logging.error(e)
@@ -122,7 +124,8 @@ class Database:
         :return: Nothing
         """
         try:
-            logging.debug("Adding job with id " + module.module_uid + " to database.")
+            logging.debug("Adding job with id " + module.module_uid
+                          + " to database.")
             self.modules[module.module_uid] = module
             return True
         except Exception as e:
@@ -136,7 +139,8 @@ class Database:
         :return: Nothing
         """
         try:
-            logging.debug("Adding job with id " + module_entry.uid + " to database.")
+            logging.debug("Adding job with id " + module_entry.uid
+                          + " to database.")
             self.modules[module_entry.module.module_uid].entrys.append(
                 module_entry.uid)
             self.module_entrys[module_entry.uid] = module_entry
@@ -144,8 +148,6 @@ class Database:
         except Exception as e:
             logging.error(e)
             return False
-
-
 
     def load_job(self, uid: str) -> Default.Entry:
         """
@@ -155,7 +157,6 @@ class Database:
         """
         logging.debug("Loading job with id " + uid + " from database.")
         return self.module_entrys[uid]
-
 
     def delete_job(self, uid: str) -> bool:
         """
@@ -174,16 +175,15 @@ class Database:
             logging.error(e)
             return False
 
-
     def exists_job(self, uid: str) -> bool:
         """
         Checks if a job for a given uid exists
         :param uid: The uid from the job to check
         :return: True or False (Exists or not)
         """
-        logging.debug("Checking existence of job with id " + uid + " in database.")
+        logging.debug("Checking existence of job with id " + uid + " in "
+                                                                   "database.")
         return self.module_entrys.get(uid) is not None
-
 
     def change_job_entry(self, uid: str, entry: str, input) -> bool:
         """
