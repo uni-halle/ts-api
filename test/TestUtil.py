@@ -10,8 +10,8 @@ class TestUtil:
     @pytest.fixture(autouse=True)
     def set_up_tear_down(self):
         yield
-        if os.path.exists("./data/audioInput/UID"):
-            os.remove("./data/audioInput/UID")
+        if os.path.exists("data/audioInput/UID"):
+            os.remove("data/audioInput/UID")
 
     def test_save_file(self):
         file = FileStorage(
@@ -27,7 +27,7 @@ class TestUtil:
         status = {
             0: "Queued",
             1: "Prepared",
-            2: "Preprocessed",
+            2: "Processed",
             3: "Whispered",
             4: "Failed",
             5: "Canceled"

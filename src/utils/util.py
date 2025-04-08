@@ -18,15 +18,20 @@ logging.basicConfig(format='%(asctime)s [%(module)s]'
 
 
 # Filesystem
-def save_file(file: FileStorage, uid: str):
+def save_file(file: FileStorage, uid: str) -> bool:
     """
     Saves a file to the audioInput folder
     :param file: The file to save
     :param uid: The uid of the job the file belongs to
     :return: Nothing
     """
-    file_path = os.path.join("./data", "audioInput", uid)
-    file.save(file_path)
+    try:
+        file_path = os.path.join(os.getcwd(), "data", "audioInput", uid)
+        file.save(file_path)
+        return True
+    except Exception as e:
+        logging.error(e)
+        return False
 
 
 # Helper

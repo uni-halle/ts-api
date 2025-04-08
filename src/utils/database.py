@@ -1,195 +1,204 @@
 import json
 import logging
 import os
+from pydoc import locate
 
 from queue import PriorityQueue
+from typing import Dict
 
 from packages.Default import Default
-from utils import util
 
 
-def add_job(module_entry: Default.Entry):
-    """
-    Adds a job to the Database
-    :param module_entry: The corresponding module entry
-    :param uid: The uid for the job
-    :return: Nothing
-    """
-    logging.debug("Adding job with id " + module_entry.uid + " to database.")
-    job_data = {"id": module_entry.uid,
-                "module_id": module_entry.default.module_uid,
-                "status": 0}
-    with open("./data/jobDatabase/" + module_entry.uid + ".json", "x") as file:
-        file.write(json.dumps(job_data))
-        file.close()
-
-
-def load_job(uid: str):
-    """
-    Loads a job for a given uid
-    :param uid: The uid from the job to laod
-    :return: The job data as a json object
-    """
-    logging.debug("Loading job with id " + uid + " from database.")
-    with open("./data/jobDatabase/" + uid + ".json", "r") as file:
-        job_data = json.load(file)
-        return job_data
-
-
-def delete_job(uid: str):
-    """
-    Deletes a job for a given uid
-    :param uid: The uid from the job to delete
-    :return: Nothing
-    """
-    logging.debug("Deleting job with id " + uid + " from database.")
-    os.remove("./data/jobDatabase/" + uid + ".json")
-
-
-def exists_job(uid: str):
-    """
-    Checks if a job for a given uid exists
-    :param uid: The uid from the job to check
-    :return: True or False (Exists or not)
-    """
-    logging.debug("Checking existence of job with id " + uid + " in database.")
-    return os.path.exists("./data/jobDatabase/" + uid + ".json")
-
-
-def change_job_status(module_entry: Default.Entry, status: int):
-    """
-    Changes the status of the corresponding job
-    :param module_entry: The module_entry from the job
-    :param status: The status id to set it to
-    :return: Nothing
-    """
-    logging.debug("Changing status of job with id "
-                  + module_entry.uid + " to " + util.get_status(status) + ".")
-    with (open("./data/jobDatabase/" + module_entry.uid + ".json", "r+") as
-          file):
-        job_data = json.load(file)
-        job_data["status"] = status
-        file.seek(0)
-        file.write(json.dumps(job_data))
-        file.truncate()
-
-
-def set_whisper_result(module_entry: Default.Entry, whisper_result: {}):
-    """
-    Sets the Whisper result of the corresponding job
-    :param module_entry: The module_entry from the job
-    :param whisper_result: The Whisper result to set
-    :return: Nothing
-    """
-    logging.debug("Adding whisper result to job with id " + module_entry.uid
-                  + ".")
-    with (open("./data/jobDatabase/" + module_entry.uid + ".json", "r+") as
-          file):
-        job_data = json.load(file)
-        job_data["whisper_result"] = whisper_result
-        file.seek(0)
-        file.write(json.dumps(job_data))
-        file.truncate()
-
-
-def set_whisper_language(module_entry: Default.Entry, whisper_language: str):
-    """
-    Sets the language of the corresponding job
-    :param module_entry: The module_entry from the job
-    :param whisper_language: The language to set
-    :return: Nothing
-    """
-    logging.debug("Adding whisper language to job with id " +
-                  module_entry.uid + ".")
-    with (open("./data/jobDatabase/" + module_entry.uid + ".json", "r+") as
-          file):
-        job_data = json.load(file)
-        job_data["whisper_language"] = whisper_language
-        file.seek(0)
-        file.write(json.dumps(job_data))
-        file.truncate()
-
-
-def set_whisper_model(module_entry: Default.Entry, whisper_model: str):
-    """
-    Sets the language of the corresponding job
-    :param module_entry: The module_entry from the job
-    :param whisper_model: The model to set
-    :return: Nothing
-    """
-    logging.debug("Adding whisper model to job with id " + module_entry.uid
-                  + ".")
-    with (open("./data/jobDatabase/" + module_entry.uid + ".json", "r+") as
-          file):
-        job_data = json.load(file)
-        job_data["whisper_model"] = whisper_model
-        file.seek(0)
-        file.write(json.dumps(job_data))
-        file.truncate()
-
-
-def save_queue(queue: PriorityQueue[(int, Default.Entry)]):
-    """
-    Saves the given queue to the database
-    :param queue: The queue to save
-    :return: Nothing
-    """
-    logging.debug("Saving queue to database.")
-    with open("./data/queue.json", "w+") as file:
-        file.seek(0)
-        file.write(json.dumps(queue.queue))
-        file.truncate()
-
-
-# def save_module(modules: Dict[str, Default]):
-#     """
-#     Saves the given queue to the database
-#     :param modules: The queue to save
-#     :return: Nothing
-#     """
-#     logging.debug("Saving Modules to database.")
-#     for uid, module in modules.items():
-#         if len(module.entrys) == 0:
-#             if os.path.exists("./data/moduleDatabase/" + uid + ".json"):
-#                 os.remove("./data/moduleDatabase/" + uid + ".json")
-#             continue
-#         with open("./data/moduleDatabase/" + uid + ".json",
-#                   "w+") as file:
-#             file.seek(0)
-#             file.write(json.dumps(module))
-#             file.truncate()
-#
-#
-# def load_modules():
-#     """
-#     Saves the given queue to the database
-#     :return: All used Opencast Modules
-#     """
-#     logging.debug("Loading Opencast Module from database.")
-#     modules: Dict[str, Default] = {}
-#     for file_name in os.listdir("./data/moduleDatabase"):
-#         if file_name.endswith(".json"):
-#             file_path = os.path.join("./data/moduleDatabase", file_name)
-#             with open(file_path, "r", encoding="utf-8") as file:
-#                 data = json.load(file)
-#             modules[data.get("uid")] = Opencast(
-#                 data.get("max_queue_entry"),
-#                 data.get("uid"), data.get(
-#                     "queue_entry"), data.get("link_list"))
-#    return modules
-
-
-def load_queue() -> PriorityQueue[(int, Default.Entry)]:
-    """
-    Loads the queue from the database
-    :return: PriorityQueue
-    """
-    logging.debug("Loading queue to database.")
+class Database:
+    modules: [str, Default] = {}
+    module_entrys: [str, Default.Entry] = {}
     queue: PriorityQueue[(int, Default.Entry)] = PriorityQueue()
-    #if os.path.exists("./data/queue.json"):
-    #    with open("./data/queue.json", "r") as file:
-    #        queue_data = json.load(file)
-    #        while len(queue_data) > 0:
-    #            data = queue_data.pop()
-    #            queue.put((data[0], data[1]))
-    return queue
+
+    def __init__(self):
+        # Load Modules
+        logging.debug("Loading Modules from database.")
+        modules: Dict[str, Default] = {}
+        for file_name in os.listdir("./data/moduleDatabase"):
+            if file_name.endswith(".json"):
+                file_path = os.path.join("./data/moduleDatabase", file_name)
+                with open(file_path, "r", encoding="utf-8") as file:
+                    module_data_raw = json.load(file)
+                    module_type: object = locate(
+                        module_data_raw["module_type"])
+                    module: module_type = module_type(**module_data_raw)
+                    modules[module.module_uid] = module
+        self.modules = modules
+        # Load Module Entrys
+        module_entrys: Dict[str, Default.Entry] = {}
+        for file_name in os.listdir("./data/jobDatabase"):
+            if file_name.endswith(".json"):
+                file_path = os.path.join("./data/jobDatabase", file_name)
+                with open(file_path, "r", encoding="utf-8") as file:
+                    # Rebuild module_entry
+                    module_entry_data_raw = json.load(file)
+                    module_entry_type: object = locate(
+                        module_entry_data_raw["module"]["module_type"]
+                        + ".Entry")
+                    module_entry: module_entry_type = module_entry_type(
+                        **module_entry_data_raw)
+                    # Find module and insert link
+                    module_type: object = locate(
+                        module_entry_data_raw["module"][
+                            "module_type"])
+                    module: module_type = self.modules.get(
+                        module_entry_data_raw["module"]["module_uid"])
+                    module_entry_data_raw["module"] = module
+                    # Insert module_entry
+                    module_entrys[module_entry.uid] = module_entry
+        self.module_entrys = module_entrys
+        # Load Queue
+        logging.debug("Loading queue to database.")
+        queue: PriorityQueue[(int, Default.Entry)] = PriorityQueue()
+        if os.path.exists("./data/queue.json"):
+            with (open("./data/queue.json", "r") as file):
+                queue_data = json.load(file)
+                while len(queue_data) > 0:
+                    priority, module_entry_data_raw = queue_data.pop()
+                    # Find module_entry and insert
+                    module_entry_type: object = locate(
+                        module_entry_data_raw["module"][
+                            "module_type"] + ".Entry")
+                    module_entry: module_entry_type = self.module_entrys.get(
+                        module_entry_data_raw["uid"])
+                    # Rebuild queue
+                    queue.put((priority, module_entry))
+        self.queue = queue
+
+    def save_database(self) -> bool:
+        """
+        Saves the given database to the storage
+        :return: Nothing
+        """
+        # Safe Modules
+        try:
+            logging.debug("Saving modules to database.")
+            for uid, module in self.modules.items():
+                if len(module.entrys) == 0:
+                    if os.path.exists("./data/moduleDatabase/"
+                                      + uid + ".json"):
+                        os.remove("./data/moduleDatabase/" + uid + ".json")
+                    continue
+                with open("./data/moduleDatabase/" + uid + ".json",
+                          "w+") as file:
+                    file.seek(0)
+                    file.write(
+                        json.dumps(module, default=lambda o: o.__dict__))
+                    file.truncate()
+        except Exception as e:
+            logging.error(e)
+            return False
+        # Safe module_entrys
+        try:
+            logging.debug("Saving module entrys to database.")
+            for uid, module in self.module_entrys.items():
+                with open("./data/jobDatabase/" + uid + ".json",
+                          "w+") as file:
+                    file.seek(0)
+                    file.write(
+                        json.dumps(module, default=lambda o: o.__dict__))
+                    file.truncate()
+        except Exception as e:
+            logging.error(e)
+            return False
+        # Safe queue
+        try:
+            logging.debug("Saving queue to database.")
+            with open("./data/queue.json", "w+") as file:
+                file.seek(0)
+                file.write(json.dumps(
+                    self.queue.queue, default=lambda o: o.__dict__))
+                file.truncate()
+        except Exception as e:
+            logging.error(e)
+            return False
+
+    def add_module(self, module: Default) -> bool:
+        """
+        Adds a job to the Database
+        :param module: The corresponding module
+        :return: Nothing
+        """
+        try:
+            logging.debug("Adding job with id " + module.module_uid
+                          + " to database.")
+            self.modules[module.module_uid] = module
+            return True
+        except Exception as e:
+            logging.error(e)
+            return False
+
+    def add_job(self, module_entry: Default.Entry) -> bool:
+        """
+        Adds a job to the Database
+        :param module_entry: The corresponding module entry
+        :return: Nothing
+        """
+        try:
+            logging.debug("Adding job with id " + module_entry.uid
+                          + " to database.")
+            self.modules[module_entry.module.module_uid].entrys.append(
+                module_entry.uid)
+            self.module_entrys[module_entry.uid] = module_entry
+            return True
+        except Exception as e:
+            logging.error(e)
+            return False
+
+    def load_job(self, uid: str) -> Default.Entry:
+        """
+        Loads a job for a given uid
+        :param uid: The uid from the job to load
+        :return: The job data as a json object
+        """
+        logging.debug("Loading job with id " + uid + " from database.")
+        return self.module_entrys[uid]
+
+    def delete_job(self, uid: str) -> bool:
+        """
+        Deletes a job for a given uid
+        :param uid: The uid from the job to delete
+        :return: Nothing
+        """
+        try:
+            logging.debug("Deleting job with id " + uid + " from database.")
+            module_entry = self.module_entrys.pop(uid)
+            self.modules[module_entry.module.module_uid].entrys.append(
+                module_entry.uid)
+            os.remove("./data/jobDatabase/" + uid + ".json")
+            return True
+        except Exception as e:
+            logging.error(e)
+            return False
+
+    def exists_job(self, uid: str) -> bool:
+        """
+        Checks if a job for a given uid exists
+        :param uid: The uid from the job to check
+        :return: True or False (Exists or not)
+        """
+        logging.debug("Checking existence of job with id " + uid + " in "
+                                                                   "database.")
+        return self.module_entrys.get(uid) is not None
+
+    def change_job_entry(self, uid: str, entry: str, input) -> bool:
+        """
+        Changes the status of the corresponding job
+        :param input: The input for the entry
+        :param uid: The module_entry_id from the job
+        :param entry: The entry to set it to
+        :return: Nothing
+        """
+        try:
+            logging.debug(f"Changing {entry} of job with id "
+                          + uid + f" to {input}.")
+            module_entry: Default.Entry = self.module_entrys.get(uid)
+            setattr(module_entry, entry, input)
+            return True
+        except Exception as e:
+            logging.error(e)
+            return False
