@@ -23,8 +23,8 @@ class Database:
                 file_path = os.path.join("./data/moduleDatabase", file_name)
                 with open(file_path, "r", encoding="utf-8") as file:
                     module_data_raw = json.load(file)
-                    module_type: object = locate(
-                        module_data_raw["module_type"])
+                    module_type: object = locate("packages." + module_data_raw[
+                        "module_type"])
                     module: module_type = module_type(**module_data_raw)
                     modules[module.module_uid] = module
         self.modules = modules
@@ -36,15 +36,17 @@ class Database:
                 with open(file_path, "r", encoding="utf-8") as file:
                     # Rebuild module_entry
                     module_entry_data_raw = json.load(file)
-                    module_entry_type: object = locate(
-                        module_entry_data_raw["module"]["module_type"]
-                        + ".Entry")
+                    module_entry_type: object = locate("packages."
+                                                       + module_entry_data_raw[
+                                                           "module"][
+                                                           "module_type"]
+                                                       + ".Entry")
                     module_entry: module_entry_type = module_entry_type(
                         **module_entry_data_raw)
                     # Find module and insert link
-                    module_type: object = locate(
-                        module_entry_data_raw["module"][
-                            "module_type"])
+                    module_type: object = locate("packages."
+                                                 + module_entry_data_raw[
+                                                     "module"]["module_type"])
                     module: module_type = self.modules.get(
                         module_entry_data_raw["module"]["module_uid"])
                     module_entry_data_raw["module"] = module
