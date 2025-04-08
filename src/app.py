@@ -186,9 +186,9 @@ def status():
     """
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
-        job_data = ts_api.database.load_job(req_id)
+        job_data: Default.Entry = ts_api.database.load_job(req_id)
         return {"jobId": req_id,
-                "status": util.get_status(job_data["status"])}, 200
+                "status": util.get_status(job_data.status)}, 200
     else:
         return {"error": "Job not found"}, 404
 
