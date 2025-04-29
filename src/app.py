@@ -1,5 +1,6 @@
 import logging
 import os
+import signal
 import uuid
 
 import io
@@ -112,8 +113,8 @@ def transcribe_get():
     output_format = request.args.get("format")
     output_formats = ["vtt", "srt", "txt", "json", "tsv"]
     if ts_api.database.exists_job(req_id):
-        job_data = ts_api.database.load_job(req_id)
-        if job_data["status"] >= 2:  # Whispered
+        job_data: Default.Entry = ts_api.database.load_job(req_id)
+        if job_data.status >= 2:  # Whispered
             if output_format in output_formats:
                 writers = {
                     "txt": whisper.utils.WriteTXT,
@@ -152,8 +153,8 @@ def transcribe_delete():
     """
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
-        job_data = ts_api.database.load_job(req_id)
-        if job_data["status"] <= 1 or job_data["status"] >= 2:
+        job_data: Default.Entry = ts_api.database.load_job(req_id)
+        if job_data.status <= 1 or job_data.status >= 2:
             ts_api.database.delete_job(req_id)
             return "OK", 200
         else:
@@ -238,10 +239,10 @@ def language_get():
     """
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
-        job_data = ts_api.database.load_job(req_id)
+        job_data: Default.Entry = ts_api.database.load_job(req_id)
         if "whisper_language" in job_data:
             return {"jobId": req_id,
-                    "language": job_data["whisper_language"]}, 200
+                    "language": job_data.whisper_language}, 200
         else:
             return {"error": "Job not processed"}, 200
     else:
@@ -256,10 +257,10 @@ def model_get():
     """
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
-        job_data = ts_api.database.load_job(req_id)
+        job_data: Default.Entry = ts_api.database.load_job(req_id)
         if "whisper_model" in job_data:  # Whispered
             return {"jobId": req_id,
-                    "model": job_data["whisper_model"]}, 200
+                    "model": job_data.whisper_model}, 200
         else:
             return {"error": "Job not processed"}, 200
     else:

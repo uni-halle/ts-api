@@ -21,7 +21,7 @@ class Opencast(Default):
     :var max_queue_length: Maximale Anzahl von Einträgen in der Warteschlange.
     """
 
-    def __init__(self, module_type: str = "File.File", max_queue_length:
+    def __init__(self, max_queue_length:
                  int = 10, **kwargs) -> None:
         """
         Initialisiert ein Opencast-Modul mit einer maximalen
@@ -30,8 +30,8 @@ class Opencast(Default):
         :param max_queue_length: Die maximale Anzahl an Jobs,
         die verarbeitet werden können.
         """
-        super().__init__(module_type, **kwargs)
-        self.max_queue_length: int = max_queue_length
+        super().__init__(module_type="Opencast.Opencast", **kwargs)
+        self.max_queue_length: int = int(max_queue_length)
         logging.debug(f"Created Opencast Module with id {self.module_uid}.")
 
     # noinspection PyMethodOverriding

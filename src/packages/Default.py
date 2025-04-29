@@ -14,7 +14,7 @@ class Default(ABC):
     """
 
     @abstractmethod
-    def __init__(self, module_type: str = "Default.Default", module_uid:
+    def __init__(self, module_type: str, module_uid:
                  str = str(uuid.uuid4()), entrys=None) -> None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem

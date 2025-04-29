@@ -1,11 +1,18 @@
 services:
   ts-api:
-    image: ts-api:local
+    # image: ts-api:local
+    build: .
     restart: on-failure
     ports:
       - 5000:5000
     volumes:
       - data:/home/python/ts-api/data
+    environment:
+      - log=debug
+      - whisper_model=large-v3-turbo
+      - parallel_workers=1
+      - login_username=username
+      - login_password=password
 
 volumes:
   data:
