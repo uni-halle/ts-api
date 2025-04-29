@@ -168,7 +168,7 @@ class Database:
         """
         try:
             logging.debug("Deleting job with id " + uid + " from database.")
-            module_entry = self.module_entrys.pop(uid)
+            self.module_entrys.pop(uid)
             os.remove("./data/jobDatabase/" + uid + ".json")
             return True
         except Exception as e:
