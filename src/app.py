@@ -239,7 +239,7 @@ def language_get():
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if "whisper_language" in job_data:
+        if hasattr(job_data, "whisper_language"):
             return {"jobId": req_id,
                     "language": job_data.whisper_language}, 200
         else:
@@ -257,7 +257,7 @@ def model_get():
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if "whisper_model" in job_data:  # Whispered
+        if hasattr(job_data, "whisper_model"):  # Whispered
             return {"jobId": req_id,
                     "model": job_data.whisper_model}, 200
         else:
