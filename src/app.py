@@ -1,6 +1,5 @@
 import logging
 import os
-import signal
 import uuid
 
 import io
@@ -127,7 +126,7 @@ def transcribe_get():
                     with io.StringIO() as file:
                         writer = writers[output_format]("./data")
                         writer.write_result(
-                            job_data['whisper_result'],
+                            job_data.whisper_result,
                             file,
                             {"max_line_width": 55,
                              "max_line_count": 2,
