@@ -15,12 +15,12 @@ class File(Default):
     :var entrys: Dictionary mit den Einträgen des Moduls.
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, module_type="File.File", **kwargs) -> None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
         leeren Dictionary für Einträge.
         """
-        super().__init__(module_type="File.File",  **kwargs)
+        super().__init__(module_type,  **kwargs)
         logging.debug(f"Created File Module with id {self.module_uid}.")
 
     # noinspection PyMethodOverriding
