@@ -9,6 +9,10 @@
     <envs>
       <env name="FLASK_RUN_PORT" value="5050" />
       <env name="log" value="debug" />
+      <env name="whisper_model" value="large-v3-turbo" />
+      <env name="parallel_workers" value="1" />
+      <env name="login_username" value="username" />
+      <env name="login_password" value="password" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
