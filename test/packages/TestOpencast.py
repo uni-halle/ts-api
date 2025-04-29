@@ -17,7 +17,7 @@ class TestUtil:
     def test_module_creation(self):
         module: Opencast = Opencast(max_queue_length=2)
         assert module.module_uid is not None
-        assert module.entrys is not None
+        assert module.queued_or_active is not None
         assert module.max_queue_length == 2
 
     def test_entry_creation(self):

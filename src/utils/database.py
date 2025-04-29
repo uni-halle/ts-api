@@ -82,7 +82,7 @@ class Database:
         try:
             logging.debug("Saving modules to database.")
             for uid, module in self.modules.items():
-                if len(module.entrys) == 0:
+                if module.queued_or_active == 0:
                     if os.path.exists("./data/moduleDatabase/"
                                       + uid + ".json"):
                         os.remove("./data/moduleDatabase/" + uid + ".json")
@@ -145,8 +145,6 @@ class Database:
         try:
             logging.debug("Adding job with id " + module_entry.uid
                           + " to database.")
-            self.modules[module_entry.module.module_uid].entrys.append(
-                module_entry.uid)
             self.module_entrys[module_entry.uid] = module_entry
             return True
         except Exception as e:
@@ -170,9 +168,7 @@ class Database:
         """
         try:
             logging.debug("Deleting job with id " + uid + " from database.")
-            module_entry = self.module_entrys.pop(uid)
-            self.modules[module_entry.module.module_uid].entrys.append(
-                module_entry.uid)
+            self.module_entrys.pop(uid)
             os.remove("./data/jobDatabase/" + uid + ".json")
             return True
         except Exception as e:

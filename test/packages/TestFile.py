@@ -24,7 +24,7 @@ class TestUtil:
     def test_module_creation(self):
         module: File = File()
         assert module.module_uid is not None
-        assert module.entrys is not None
+        assert module.queued_or_active is not None
 
     def test_entry_creation(self):
         module: File = File()
