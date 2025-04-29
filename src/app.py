@@ -173,7 +173,7 @@ def module_opencast_post():
     max_queue_length: str = request.form.get("max_queue_length")
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
-    module: Opencast = Opencast(max_queue_length)
+    module: Opencast = Opencast(max_queue_length=int(max_queue_length))
     ts_api.database.modules[module.module_uid] = module
     return {"moduleId": module.module_uid}, 201
 
