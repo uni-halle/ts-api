@@ -100,6 +100,7 @@ class TsApi:
         :param entry: Der Eintrag des abgeschlossenen Jobs.
         """
         logging.info(f"Finished job with id {entry.uid}.")
+        entry.module.queued_or_active = entry.module.queued_or_active - 1
         self.running_jobs.remove(entry)
 
     # Thread to manage queue

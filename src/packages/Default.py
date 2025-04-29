@@ -10,21 +10,19 @@ class Default(ABC):
     Abstrakte Basisklasse für Module.
 
     :var module_uid: Eindeutige ID des Moduls.
-    :var entrys: Dictionary mit den Einträgen des Moduls.
+    :var queued_or_active: Anzahl der aktiven oder gequeten Einträge
     """
 
     @abstractmethod
     def __init__(self, module_type: str, module_uid:
-                 str = str(uuid.uuid4()), entrys=None) -> None:
+                 str = str(uuid.uuid4()), queued_or_active=0) -> None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
         leeren Dictionary für Einträge.
         """
-        if entrys is None:
-            entrys = []
         self.module_type: str = module_type
         self.module_uid: str = module_uid
-        self.entrys: [str] = entrys
+        self.queued_or_active: int = queued_or_active
 
     # noinspection PyMethodOverriding
     class Entry(ABC):
@@ -74,6 +72,7 @@ class Default(ABC):
             Kann von Unterklassen implementiert werden.
             :param ts_api: Die aktuelle TsAPI Instanz.
             """
+            self.module.queued_or_active = self.module.queued_or_active + 1
             ts_api.add_to_queue(self.priority, self)
             return True
 

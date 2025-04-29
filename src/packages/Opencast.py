@@ -17,7 +17,7 @@ class Opencast(Default):
     Eine Implementierung des Default-Moduls für Opencast.
 
     :var module_uid: Eindeutige ID des Moduls.
-    :var entrys: Dictionary mit den Einträgen des Moduls.
+    :var queued_or_active: Anzahl der aktiven oder gequeten Einträge
     :var max_queue_length: Maximale Anzahl von Einträgen in der Warteschlange.
     """
 
@@ -71,7 +71,7 @@ class Opencast(Default):
             :return: `True`, wenn der Job hinzugefügt wurde, `False`,
             wenn die Warteschlange voll ist.
             """
-            if len(self.module.entrys) < self.module.max_queue_length:
+            if self.module.queued_or_active < self.module.max_queue_length:
                 super().queuing(ts_api)
                 logging.debug(f"Queued Opencast Module entry with id"
                               f" {self.uid}.")
