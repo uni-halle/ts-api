@@ -24,14 +24,14 @@ class TsApi:
         """
         logging.info("Starting TsAPI...")
         # Shutdown Handling
-        signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
+        signal.signal(signal.SIGINT, self.exit)
         # Creating/Loading Database
         self.database = Database()
         # Queue and Running Jobs
         self.running_jobs: List[Default.Entry] = []
         # Load & Create Module
-        if len(self.database.modules) == 0:
+        if "DefaultFileModule" not in self.database.modules:
             self.file_module = File(module_uid="DefaultFileModule")
             self.database.modules["DefaultFileModule"] = self.file_module
         else:

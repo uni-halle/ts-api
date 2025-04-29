@@ -54,7 +54,7 @@ class Database:
                     module_entrys[module_entry.uid] = module_entry
         self.module_entrys = module_entrys
         # Load Queue
-        logging.debug("Loading queue to database.")
+        logging.debug("Loading queue from database.")
         queue: PriorityQueue[(int, Default.Entry)] = PriorityQueue()
         if os.path.exists("./data/queue.json"):
             with (open("./data/queue.json", "r") as file):
@@ -62,9 +62,11 @@ class Database:
                 while len(queue_data) > 0:
                     priority, module_entry_data_raw = queue_data.pop()
                     # Find module_entry and insert
-                    module_entry_type: object = locate(
-                        module_entry_data_raw["module"][
-                            "module_type"] + ".Entry")
+                    module_entry_type: object = locate("packages."
+                                                       + module_entry_data_raw[
+                                                           "module"][
+                                                           "module_type"]
+                                                       + ".Entry")
                     module_entry: module_entry_type = self.module_entrys.get(
                         module_entry_data_raw["uid"])
                     # Rebuild queue

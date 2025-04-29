@@ -13,11 +13,15 @@ COPY ./requirements.txt ./home/${USER}/requirements.txt
 RUN pip install --no-warn-script-location -r /home/${USER}/requirements.txt && \
     rm /home/${USER}/requirements.txt
 
-COPY --chown=${USER}:${USER} ./data /home/${USER}/ts-api/data
+RUN mkdir -p /home/${USER}/ts-api/data/audioInput \
+             /home/${USER}/ts-api/data/jobDatabase \
+             /home/${USER}/ts-api/data/models \
+             /home/${USER}/ts-api/data/moduleDatabase
 COPY --chown=${USER}:${USER} ./src /home/${USER}/ts-api/
+COPY --chown=${USER}:${USER} ./src/.env.example /home/${USER}/ts-api/.env
 
 ENV PATH=/home/${USER}/.local/bin:$PATH
-ENV FLASK_APP /home/${USER}/ts-api/app.py
+ENV FLASK_APP=/home/${USER}/ts-api/app.py
 WORKDIR /home/${USER}/ts-api
 
 CMD ["flask", "run", "--host=0.0.0.0"]

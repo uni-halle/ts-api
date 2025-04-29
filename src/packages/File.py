@@ -15,7 +15,7 @@ class File(Default):
     :var entrys: Dictionary mit den Einträgen des Moduls.
     """
 
-    def __init__(self, module_type: str = "File.File", **kwargs) -> None:
+    def __init__(self, module_type="File.File", **kwargs) -> None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
         leeren Dictionary für Einträge.
