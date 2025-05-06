@@ -76,6 +76,8 @@ class Opencast(Default):
                 logging.debug(f"Queued Opencast Module entry with id"
                               f" {self.uid}.")
                 return True
+            logging.debug(f"Refused to queue Opencast Module entry with id"
+                          f" {self.uid} because of max queue length.")
             return False
 
         def preprocessing(self) -> None:
