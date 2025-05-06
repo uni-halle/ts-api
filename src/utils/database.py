@@ -99,6 +99,13 @@ class Database:
         # Safe module_entrys
         try:
             logging.debug("Saving module entrys to database.")
+
+            delete_able_files = [f for f in os.listdir(
+                "./data/jobDatabase/") if f.split(".")[0] not in
+                                 self.module_entrys.keys()]
+            for delete_able_file in delete_able_files:
+                os.remove(delete_able_file)
+
             for uid, module in self.module_entrys.items():
                 with open("./data/jobDatabase/" + uid + ".json",
                           "w+") as file:
@@ -169,7 +176,6 @@ class Database:
         try:
             logging.debug("Deleting job with id " + uid + " from database.")
             self.module_entrys.pop(uid)
-            os.remove("./data/jobDatabase/" + uid + ".json")
             return True
         except Exception as e:
             logging.error(e)
