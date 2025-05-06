@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import sys
 import threading
 import time
 from typing import List
@@ -63,7 +64,7 @@ class TsApi:
             self.database.queue.put((module_entry.priority, module_entry))
         self.database.save_database()
         logging.info("TsAPI stopped!")
-        os.kill(os.getpid(), signal.SIGKILL)
+        sys.exit(0)
 
     def add_to_queue(self, priority: int, module_entry: Default.Entry) -> None:
         """
