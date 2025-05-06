@@ -27,7 +27,8 @@ class Transcriber:
         Starts the thread that whispers the audio
         :return: Nothing
         """
-        whisper_thread = threading.Thread(target=self.transcriber_thread)
+        whisper_thread = threading.Thread(target=self.transcriber_thread,
+                                          daemon = True)
         whisper_thread.start()
 
     def transcriber_thread(self):
