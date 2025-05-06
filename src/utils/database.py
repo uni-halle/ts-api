@@ -41,8 +41,6 @@ class Database:
                                                            "module"][
                                                            "module_type"]
                                                        + ".Entry")
-                    module_entry: module_entry_type = module_entry_type(
-                        **module_entry_data_raw)
                     # Find module and insert link
                     module_type: object = locate("packages."
                                                  + module_entry_data_raw[
@@ -51,6 +49,8 @@ class Database:
                         module_entry_data_raw["module"]["module_uid"])
                     module_entry_data_raw["module"] = module
                     # Insert module_entry
+                    module_entry: module_entry_type = module_entry_type(
+                        **module_entry_data_raw)
                     module_entrys[module_entry.uid] = module_entry
         self.module_entrys = module_entrys
         # Load Queue
@@ -101,8 +101,8 @@ class Database:
             logging.debug("Saving module entrys to database.")
 
             delete_able_files = [f for f in os.listdir(
-                "./data/jobDatabase/") if f.split(".")[0] not in
-                                 self.module_entrys.keys()]
+                "./data/jobDatabase/") if f.endswith(".json") and (f.split(
+                ".")[0] not in self.module_entrys.keys())]
             for delete_able_file in delete_able_files:
                 os.remove(delete_able_file)
 

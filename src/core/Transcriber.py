@@ -90,7 +90,6 @@ class Transcriber:
                           + self.module_entry.uid + "!")
             self.ts_api.unregister_job(self.module_entry)
         except Exception as e:
-            os.remove(self.file_path)
             logging.error(e)
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "status", 4)  # Failed
