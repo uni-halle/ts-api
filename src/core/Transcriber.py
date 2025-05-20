@@ -28,7 +28,7 @@ class Transcriber:
         :return: Nothing
         """
         whisper_thread = threading.Thread(target=self.transcriber_thread,
-                                          daemon = True)
+                                          daemon=True)
         whisper_thread.start()
 
     def transcriber_thread(self):

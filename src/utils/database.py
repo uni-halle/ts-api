@@ -101,8 +101,9 @@ class Database:
             logging.debug("Saving module entrys to database.")
 
             delete_able_files = [f for f in os.listdir(
-                "./data/jobDatabase/") if f.endswith(".json") and (f.split(
-                ".")[0] not in self.module_entrys.keys())]
+                "./data/jobDatabase/") if f.endswith(".json")
+                and (f.split(".")[0] not in
+                     self.module_entrys.keys())]
             for delete_able_file in delete_able_files:
                 os.remove("./data/jobDatabase/" + delete_able_file)
 
