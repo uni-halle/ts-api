@@ -41,8 +41,6 @@ class Database:
                                                            "module"][
                                                            "module_type"]
                                                        + ".Entry")
-                    module_entry: module_entry_type = module_entry_type(
-                        **module_entry_data_raw)
                     # Find module and insert link
                     module_type: object = locate("packages."
                                                  + module_entry_data_raw[
@@ -51,6 +49,8 @@ class Database:
                         module_entry_data_raw["module"]["module_uid"])
                     module_entry_data_raw["module"] = module
                     # Insert module_entry
+                    module_entry: module_entry_type = module_entry_type(
+                        **module_entry_data_raw)
                     module_entrys[module_entry.uid] = module_entry
         self.module_entrys = module_entrys
         # Load Queue
@@ -99,6 +99,14 @@ class Database:
         # Safe module_entrys
         try:
             logging.debug("Saving module entrys to database.")
+
+            delete_able_files = [f for f in os.listdir(
+                "./data/jobDatabase/") if f.endswith(".json")
+                and (f.split(".")[0] not in
+                     self.module_entrys.keys())]
+            for delete_able_file in delete_able_files:
+                os.remove("./data/jobDatabase/" + delete_able_file)
+
             for uid, module in self.module_entrys.items():
                 with open("./data/jobDatabase/" + uid + ".json",
                           "w+") as file:
@@ -169,7 +177,6 @@ class Database:
         try:
             logging.debug("Deleting job with id " + uid + " from database.")
             self.module_entrys.pop(uid)
-            os.remove("./data/jobDatabase/" + uid + ".json")
             return True
         except Exception as e:
             logging.error(e)

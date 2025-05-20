@@ -27,7 +27,8 @@ class Transcriber:
         Starts the thread that whispers the audio
         :return: Nothing
         """
-        whisper_thread = threading.Thread(target=self.transcriber_thread)
+        whisper_thread = threading.Thread(target=self.transcriber_thread,
+                                          daemon=True)
         whisper_thread.start()
 
     def transcriber_thread(self):
@@ -89,7 +90,6 @@ class Transcriber:
                           + self.module_entry.uid + "!")
             self.ts_api.unregister_job(self.module_entry)
         except Exception as e:
-            os.remove(self.file_path)
             logging.error(e)
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "status", 4)  # Failed
