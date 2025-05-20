@@ -104,7 +104,7 @@ class Database:
                 "./data/jobDatabase/") if f.endswith(".json") and (f.split(
                 ".")[0] not in self.module_entrys.keys())]
             for delete_able_file in delete_able_files:
-                os.remove(delete_able_file)
+                os.remove("./data/jobDatabase/" + delete_able_file)
 
             for uid, module in self.module_entrys.items():
                 with open("./data/jobDatabase/" + uid + ".json",
