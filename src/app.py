@@ -135,7 +135,8 @@ def transcribe_get():
                         return Response(file.getvalue(), mimetype="text/vtt")
                 except Exception as e:
                     logging.debug(e)
-                    return "{}", 500
+                    return {"error": "Error while generating File: "
+                                     + str(e)}, 500
             else:
                 return {"error": "Output format not supported"}, 200
         else:
