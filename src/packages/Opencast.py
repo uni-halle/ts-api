@@ -45,8 +45,12 @@ class Opencast(Default):
         :var initial_prompt: Initiale Beschreibung oder Titel.
         """
 
-        def __init__(self, module, uid: str, link: str, initial_prompt:
-                     str = "", priority: int = 1, **kwargs) -> None:
+        def __init__(self,
+                     module,
+                     uid: str,
+                     link: str,
+                     priority: int = 1,
+                     **kwargs) -> None:
             """
             Initialisiert einen neuen Opencast Moduleintrag.
 
@@ -59,7 +63,6 @@ class Opencast(Default):
             super().__init__(module, uid, priority, **kwargs)
             self.module: Opencast = module
             self.link: str = link
-            self.initial_prompt: str = initial_prompt
             logging.debug(f"Created Opencast Module entry with id {self.uid}.")
 
         def queuing(self, ts_api: TsApi) -> bool:

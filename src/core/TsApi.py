@@ -6,7 +6,7 @@ import threading
 import time
 from typing import List
 
-import whisper
+from pywhispercpp.utils import download_model
 
 from packages.File import File
 from core.Transcriber import Transcriber
@@ -41,7 +41,7 @@ class TsApi:
         model_size = os.environ.get("whisper_model")
         if not os.path.exists("./data/models/" + model_size + ".pt"):
             logging.info("Downloading Whisper model...")
-            whisper.load_model(model_size, download_root="./data/models")
+            download_model(model_size, download_dir="./data/models")
         logging.info(f"Whisper model \"{model_size}\" loaded!")
         logging.info("TsAPI started!")
         self.running: bool = True

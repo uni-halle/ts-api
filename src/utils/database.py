@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import numpy as np
+
 from pydoc import locate
 
 from queue import PriorityQueue
@@ -78,6 +80,19 @@ class Database:
         Saves the given database to the storage
         :return: Nothing
         """
+
+        def safe_serialize(o):
+            if hasattr(o, '__dict__'):
+                return o.__dict__
+            elif isinstance(o, (np.float32, np.float64)):
+                return float(o)
+            elif isinstance(o, (np.int32, np.int64)):
+                return int(o)
+            elif isinstance(o, np.ndarray):
+                return o.tolist()
+            else:
+                return str(o)
+
         # Safe Modules
         try:
             logging.debug("Saving modules to database.")
@@ -112,7 +127,7 @@ class Database:
                           "w+") as file:
                     file.seek(0)
                     file.write(
-                        json.dumps(module, default=lambda o: o.__dict__))
+                        json.dumps(module, default=safe_serialize))
                     file.truncate()
         except Exception as e:
             logging.error(e)

@@ -35,12 +35,16 @@ class Default(ABC):
         """
 
         @abstractmethod
-        def __init__(self, module, uid: str, priority: int,
-                     time: float =
-                     time.time(), status: int | None = None, whisper_result:
-                     str | None = None,
-                     whisper_language: str | None = None, whisper_model: str
-                     | None = None) -> None:
+        def __init__(self,
+                     module,
+                     uid: str,
+                     priority: int,
+                     time: float = time.time(),
+                     status: int | None = None,
+                     initial_prompt: str | None = None,
+                     whisper_result: str | None = None,
+                     whisper_language: str | None = None,
+                     whisper_model: str | None = None) -> None:
             """
             Initialisiert einen neuen Moduleintrag und
             verknüpft ihn mit dem Modul.
@@ -52,6 +56,7 @@ class Default(ABC):
             self.module: Default = module
             self.uid: str = uid
             self.status: int | None = status
+            self.initial_prompt: str | None = initial_prompt
             self.whisper_result: int | None = whisper_result
             self.whisper_language: str | None = whisper_language
             self.whisper_model: str | None = whisper_model
