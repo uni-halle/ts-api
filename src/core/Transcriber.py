@@ -62,7 +62,8 @@ class Transcriber:
                          + self.module_entry.uid + "...")
             # params
             kwargs = {
-                "language": self.whisper_language
+                "language": self.whisper_language,
+                "cpu_threads": os.environ.get("whisper_cpu_threads"),
             }
             if (hasattr(self.module_entry, "initial_prompt")
                     and self.module_entry.initial_prompt):
