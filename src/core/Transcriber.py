@@ -40,7 +40,9 @@ class Transcriber:
                          + self.module_entry.uid + "...")
             # Whisper model
             model_size = os.environ.get("whisper_model")
-            model = Model(model_size, models_dir="./data/models")
+            model = Model(model_size,
+                          models_dir="./data/models",
+                          cpu_threads=os.environ.get("whisper_cpu_threads"))
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_model",
                                                   model_size)
@@ -63,7 +65,6 @@ class Transcriber:
             # params
             kwargs = {
                 "language": self.whisper_language,
-                "cpu_threads": os.environ.get("whisper_cpu_threads"),
             }
             if (hasattr(self.module_entry, "initial_prompt")
                     and self.module_entry.initial_prompt):
