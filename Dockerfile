@@ -4,8 +4,11 @@ ARG USER="python"
 ARG UID="1000"
 
 RUN apt -y update &&\
-    apt install -y ffmpeg git gcc clang clang-tools llvm cmake&&\
+    apt install -y ffmpeg git gcc clang clang-tools cmake&&\
     useradd -m -u ${UID} -s /bin/bash ${USER}
+
+ENV CC=clang
+ENV CXX=clang++
 
 USER ${USER}
 
