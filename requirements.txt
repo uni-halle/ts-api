@@ -5,4 +5,4 @@ psutil~=6.1.0
 pytest~=8.3.3
 requests~=2.32.3
 flake8
-pywhispercpp
+git+https://github.com/absadiki/pywhispercpp
