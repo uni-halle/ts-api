@@ -42,7 +42,7 @@ class Transcriber:
             model_size = os.environ.get("whisper_model")
             model = Model(model_size,
                           models_dir="./data/models",
-                          cpu_threads=os.environ.get("whisper_cpu_threads"))
+                          n_threads=os.environ.get("whisper_cpu_threads"))
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_model",
                                                   model_size)
