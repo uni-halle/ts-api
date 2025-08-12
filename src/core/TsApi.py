@@ -142,6 +142,7 @@ class TsApi:
                         trans.start_thread()
                     except Exception as e:
                         logging.error(f"Error processing job: {e}")
+                        self.running_jobs.remove(module_entry)
                         self.database.change_job_entry(module_entry.uid,
                                                        "status", 5)  # Canceled
             time.sleep(5)
