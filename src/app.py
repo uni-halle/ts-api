@@ -1,13 +1,12 @@
 import logging
 import os
 import uuid
-
-import io
+import tempfile
 import psutil
 
-import whisper.utils
-from flask import Flask, request, Response
+from flask import Flask, request, send_file
 from werkzeug.datastructures import FileStorage, Authorization
+from pywhispercpp.utils import output_vtt, output_csv, output_srt, output_txt
 
 from packages.File import File
 from packages.Opencast import Opencast
@@ -52,7 +51,7 @@ def transcribe_post():
     module: str = request.form.get("module")
     module_id: str = request.form.get("module_id")
     link: str = request.form.get("link")
-    title: str = request.form.get("title")
+    title: str = request.form.get("title") if "title" in request.form else None
 
     if ('file' not in request.files) and (not (module and module_id and link)):
         return {"error": "No file or link with module and module id"}, 415
@@ -81,17 +80,28 @@ def transcribe_post():
     # Old File.py upload
     if 'file' in request.files:
         file: FileStorage = request.files['file']
-        module_entry: File.Entry = File.Entry(ts_api.file_module, uid,
-                                              int(priority))
+        module_entry: File.Entry = (
+            File.Entry(ts_api.file_module,
+                       uid,
+                       int(priority),
+                       initial_prompt=title
+                       )
+        )
         module_entry.queuing(ts_api, file)
         return {"jobId": uid}, 201
     # Insert modules here
     elif module and module_id:
-        if module == "opencast" and title and link:
+        if module == "opencast" and link:
             if module_id in ts_api.database.modules:
                 module: Default = ts_api.database.modules[module_id]
-                module_entry: Opencast.Entry = Opencast.Entry(module, uid,
-                                                              link, title)
+                module_entry: Opencast.Entry = (
+                    Opencast.Entry(module,
+                                   uid,
+                                   link,
+                                   int(priority),
+                                   initial_prompt=title
+                                   )
+                )
                 if module_entry.queuing(ts_api):
                     return {"jobId": uid}, 201
                 else:
@@ -110,29 +120,25 @@ def transcribe_get():
     """
     req_id = request.args.get("id")
     output_format = request.args.get("format")
-    output_formats = ["vtt", "srt", "txt", "json", "tsv"]
+    output_formats = ["vtt", "srt", "txt", "csv"]
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
         if job_data.status >= 2:  # Whispered
             if output_format in output_formats:
                 writers = {
-                    "txt": whisper.utils.WriteTXT,
-                    "vtt": whisper.utils.WriteVTT,
-                    "srt": whisper.utils.WriteSRT,
-                    "tsv": whisper.utils.WriteTSV,
-                    "json": whisper.utils.WriteJSON,
+                    "vtt": output_vtt,
+                    "srt": output_srt,
+                    "txt": output_txt,
+                    "csv": output_csv,
                 }
                 try:
-                    with io.StringIO() as file:
-                        writer = writers[output_format]("./data")
-                        writer.write_result(
-                            job_data.whisper_result,
-                            file,
-                            {"max_line_width": 55,
-                             "max_line_count": 2,
-                             "highlight_words": False}
-                        )
-                        return Response(file.getvalue(), mimetype="text/vtt")
+                    with (tempfile.NamedTemporaryFile(suffix="."
+                          + output_format) as
+                          tmp):
+                        tmp_path = tmp.name
+                        writers[output_format](
+                            job_data.whisper_result, tmp_path)
+                        return send_file(tmp_path, mimetype="text/vtt")
                 except Exception as e:
                     logging.debug(e)
                     return {"error": "Error while generating File: "

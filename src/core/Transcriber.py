@@ -2,10 +2,9 @@ import logging
 import threading
 import os
 
-import torch
 
 from packages.Default import Default
-import whisper
+from pywhispercpp.model import Model
 
 
 class Transcriber:
@@ -41,23 +40,19 @@ class Transcriber:
                          + self.module_entry.uid + "...")
             # Whisper model
             model_size = os.environ.get("whisper_model")
-            model = whisper.load_model(model_size,
-                                       download_root="./data/models")
+            model = Model(model_size,
+                          models_dir="./data/models",
+                          n_threads=int(os.environ.get("whisper_cpu_threads")))
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_model",
                                                   model_size)
-            # Load audio
-            audio = whisper.load_audio(self.file_path)
-            short_audio = whisper.pad_or_trim(audio)
             # Detect language
-            mel = (whisper.log_mel_spectrogram(short_audio, model.dims.n_mels)
-                   .to(model.device).to(torch.float32))
-            _, probs = model.detect_language(mel)
-            self.whisper_language = str(max(probs, key=probs.get))
+            most_likely, probs = model.auto_detect_language(
+                self.file_path, offset_ms=5000)
+            self.whisper_language = most_likely[0]
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "whisper_language",
-                                                  str(max(probs,
-                                                          key=probs.get)))
+                                                  self.whisper_language)
             self.ts_api.database.change_job_entry(self.module_entry.uid,
                                                   "status",
                                                   2)  # processed
@@ -67,17 +62,16 @@ class Transcriber:
 
             logging.info("Starting Whisper for job with id "
                          + self.module_entry.uid + "...")
-            # Initial Prompt
-            if hasattr(self.module_entry, "initial_prompt"):
-                initial_prompt = self.module_entry.initial_prompt
-            else:
-                initial_prompt = None
+            # params
+            kwargs = {
+                "language": self.whisper_language,
+            }
+            if (hasattr(self.module_entry, "initial_prompt")
+                    and self.module_entry.initial_prompt):
+                kwargs["initial_prompt"] = self.module_entry.initial_prompt
+
             # Translate audio
-            result = whisper.transcribe(model=model,
-                                        audio=audio,
-                                        initial_prompt=initial_prompt,
-                                        language=self.whisper_language,
-                                        fp16=False)
+            result = model.transcribe(self.file_path, **kwargs)
             # Store results
             self.whisper_result = result
             self.ts_api.database.change_job_entry(self.module_entry.uid,

@@ -1,8 +1,8 @@
-werkzeug~=3.0.4
+werkzeug~=3.0.6
 flask~=3.0.3
 python-dotenv~=1.0.1
 psutil~=6.1.0
 pytest~=8.3.3
-openai-whisper==20240930
 requests~=2.32.3
 flake8
+git+https://github.com/absadiki/pywhispercpp
