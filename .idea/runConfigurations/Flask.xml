@@ -12,6 +12,7 @@
       <env name="login_username" value="username" />
       <env name="parallel_workers" value="1" />
       <env name="whisper_model" value="large-v3-turbo" />
+      <env name="whisper_cpu_threads" value="4" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

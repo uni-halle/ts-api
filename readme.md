@@ -37,7 +37,8 @@ Possible formats are:
 ### Environment variables
 There are a few environment variables that affect the behavior of TsAPI.
 
- - "whisper_model" - Specifies which whisper model should be used. If the model is not already downloaded, it will try to download it (requires internet connection).
+ - "whisper_model" - Specifies Whisper model to be used. If the model is not already downloaded, it will try to download it (requires internet connection).
+ - "whisper_cpu_threads" - Number of threads Whisper C++ should use.
  - "parallel_workers" - Specifies the maximum number of Whisper instances that can run in parallel. Multithreading is already supported by Whisper and the value of the variable changes depending on your hardware.
 
 The default settings are already contained in an .env file, but can be overwritten by variables in the environment.
@@ -70,7 +71,7 @@ Test coverage covers all functions of the `utils` and the basic creation of `TsA
 Sends a file or link for subtitling to TsAPI.
 
 _Form parameter:_
- 
+
  - file: The file
  - link: The link to a file
  - username: The username for auth (optional)

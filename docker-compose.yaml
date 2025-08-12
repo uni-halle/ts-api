@@ -10,6 +10,7 @@ services:
     environment:
       - log=debug
       - whisper_model=large-v3-turbo
+      - whisper_cpu_threads=23
       - parallel_workers=1
       - login_username=username
       - login_password=password
