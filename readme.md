@@ -46,6 +46,10 @@ The default settings are already contained in an .env file, but can be overwritt
 ### Using it with GPU
 So technically, thanks to PyTorch, it is possible that Whisper runs via Nvidia Cuda and thus becomes faster. Up to now this has not been tested because the hardware does not exist but the implementation is not in the TsAPI but in the Whisper Python library. It is unclear if the Docker container supports passing the GPU to Python or if it needs to be additionally modified for this.
 
+Please use the `cuda_gpu` branch for use with graphics card from Nvidia. Additionally, a local container-toolkit/nvidia driver installation is required. Updating drivers can lead to a non-booting system. Memory fragmentation, for instance, when using the graphics card for both, video output and transcription, can cause the model not to fit in spite of enough memory.
+
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation
+
 ## Local installation
 It is easily possible to run TsAPI locally without Docker (e.g. for development or testing). This requires both Python 3.10, ffmpeg and git to be installed on the system.
 First you clone the repo into a folder:
