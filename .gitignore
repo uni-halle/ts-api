@@ -14,9 +14,6 @@ QUICK_START_REFACTORED.md
 *.srt
 *.vtt
 
-# Database viewer script
-view_db.sh
-
 # Data directory
 data/
 
