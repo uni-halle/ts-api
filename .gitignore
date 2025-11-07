@@ -1,0 +1,53 @@
+# Refactoring documentation
+REFACTORING_SUMMARY.md
+CANCELLATION_FIX.md
+QUICK_START_REFACTORED.md
+
+# Media files
+*.mp3
+*.mp4
+*.wav
+*.m4a
+*.flac
+
+# Subtitle files
+*.srt
+*.vtt
+
+# Database viewer script
+view_db.sh
+
+# Data directory
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test outputs
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Docker volumes
+docker-compose.override.yml
+

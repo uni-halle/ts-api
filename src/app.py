@@ -12,6 +12,7 @@ from packages.File import File
 from packages.Opencast import Opencast
 from packages.Default import Default
 from utils import util
+from utils.database import JobStatus
 from core.TsApi import TsApi
 from dotenv import load_dotenv
 
@@ -74,7 +75,7 @@ def transcribe_post():
     if cpu_usage > 400:
         return {"error": "Not enough cpu"}, 507
 
-    if ts_api.database.queue.qsize() > 50:
+    if ts_api.job_queue.qsize() > 50:
         return {"error": "The queue is full"}, 507
 
     # Old File.py upload
@@ -123,7 +124,7 @@ def transcribe_get():
     output_formats = ["vtt", "srt", "txt", "csv"]
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if job_data.status >= 2:  # Whispered
+        if job_data.status == JobStatus.COMPLETED:  # Completed
             if output_format in output_formats:
                 writers = {
                     "vtt": output_vtt,
@@ -154,17 +155,33 @@ def transcribe_get():
 @app.route("/transcribe", methods=['DELETE'])
 def transcribe_delete():
     """
-    Endpoint to delete captions
+    Endpoint to cancel/delete a job
     :return: HttpResponse
     """
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if job_data.status <= 1 or job_data.status >= 2:
+        
+        # If job is running, cancel it
+        if job_data.status == JobStatus.PROCESSING:
+            if ts_api.cancel_job(req_id, requeue=False):
+                return {"message": "Job canceled successfully"}, 200
+            else:
+                return {"error": "Failed to cancel job"}, 500
+        
+        # If job is queued or prepared, cancel it
+        elif job_data.status in (JobStatus.QUEUED, JobStatus.PREPARED):
+            ts_api.cancel_job(req_id, requeue=False)
             ts_api.database.delete_job(req_id)
-            return "OK", 200
+            return {"message": "Job canceled successfully"}, 200
+        
+        # If job is completed, failed, or canceled, just delete it
+        elif job_data.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELED):
+            ts_api.database.delete_job(req_id)
+            return {"message": "Job deleted successfully"}, 200
+        
         else:
-            return {"error": "Job currently processing"}, 200
+            return {"error": "Unknown job status"}, 500
     else:
         return {"error": "Job not found"}, 404
 
@@ -219,7 +236,7 @@ def system_status():
         "swap_usage": round(psutil.swap_memory().percent, 1),
         "swap_free": round(psutil.swap_memory().free
                            * 100 / psutil.swap_memory().total, 1),
-        "queue_length": ts_api.database.queue.qsize(),
+        "queue_length": ts_api.job_queue.qsize(),
         "running_jobs": len(ts_api.running_jobs),
         "parallel_jobs": int(os.environ.get("parallel_workers"))
     }, 200
