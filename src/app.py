@@ -160,7 +160,7 @@ def transcribe_delete():
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if job_data.status <= 1 or job_data.status >= 2:
+        if job_data.status != 2:
             ts_api.database.delete_job(req_id)
             return "OK", 200
         else:
