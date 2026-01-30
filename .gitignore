@@ -1,0 +1,7 @@
+.venv/
+*.mp3
+*.mp4
+*.srt
+*.png
+*.csv
+PR_NOTES.txt
