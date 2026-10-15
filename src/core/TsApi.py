@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, Future
 from queue import PriorityQueue, Empty
 from typing import Dict, List
 
-from pywhispercpp.utils import download_model
+from faster_whisper import WhisperModel
 
 from packages.File import File
 from core.Transcriber import Transcriber
@@ -53,14 +53,30 @@ class TsApi:
             self.database.add_module(self.file_module)
         else:
             self.file_module = self.database.modules["DefaultFileModule"]
+        # Load Whisper Model (faster-whisper downloads automatically if needed)
+        model_size = os.environ.get("whisper_model")
+        device = os.environ.get("whisper_device", "cuda")
+        compute_type = os.environ.get("whisper_compute_type", "float16")
+        cpu_threads = int(os.environ.get("whisper_cpu_threads", "4"))
         
-        # Load Whisper model
-        model_size = os.environ.get("whisper_model", "tiny")
-        if not os.path.exists(f"./data/models/{model_size}.pt"):
-            logging.info("Downloading Whisper model...")
-            download_model(model_size, download_dir="./data/models")
-        logging.info(f"Whisper model \"{model_size}\" loaded!")
-        
+        try:
+            logging.info(f"Initializing Whisper model '{model_size}' on {device}...")
+            # This will download the model if it doesn't exist
+            model_kwargs = {
+                "device": device,
+                "compute_type": compute_type,
+                "download_root": "./data/models"
+            }
+            if device == "cpu":
+                model_kwargs["cpu_threads"] = cpu_threads
+            
+            test_model = WhisperModel(model_size, **model_kwargs)
+            logging.info(f"Whisper model \"{model_size}\" loaded successfully!")
+            del test_model  # Free memory
+        except Exception as e:
+            logging.error(f"Failed to load Whisper model: {e}")
+            raise
+
         # State
         self.running = True
         

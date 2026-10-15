@@ -44,7 +44,8 @@ class Default(ABC):
                      initial_prompt: str | None = None,
                      whisper_result: str | None = None,
                      whisper_language: str | None = None,
-                     whisper_model: str | None = None) -> None:
+                     whisper_model: str | None = None,
+                     vad_segments: dict | None = None) -> None:
             """
             Initialisiert einen neuen Moduleintrag und
             verknüpft ihn mit dem Modul.
@@ -60,6 +61,7 @@ class Default(ABC):
             self.whisper_result: int | None = whisper_result
             self.whisper_language: str | None = whisper_language
             self.whisper_model: str | None = whisper_model
+            self.vad_segments: dict | None = vad_segments
 
         def __lt__(self, other) -> bool:
             return self.time < other.time

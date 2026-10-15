@@ -4,9 +4,11 @@ import uuid
 import tempfile
 import psutil
 
-from flask import Flask, request, send_file
+
+from flask import Flask, request, send_file, Response
 from werkzeug.datastructures import FileStorage, Authorization
-from pywhispercpp.utils import output_vtt, output_csv, output_srt, output_txt
+from utils.formatters import output_vtt, output_csv, output_srt, output_txt
+from utils.vad_capture import generate_speech_csv, generate_timeline_csv, generate_vad_summary
 
 from packages.File import File
 from packages.Opencast import Opencast
@@ -126,22 +128,50 @@ def transcribe_get():
         job_data: Default.Entry = ts_api.database.load_job(req_id)
         if job_data.status == JobStatus.COMPLETED:  # Completed
             if output_format in output_formats:
-                writers = {
+                formatters = {
                     "vtt": output_vtt,
                     "srt": output_srt,
                     "txt": output_txt,
                     "csv": output_csv,
                 }
                 try:
-                    with (tempfile.NamedTemporaryFile(suffix="."
-                          + output_format) as
-                          tmp):
+                    # Generate formatted output (returns string)
+                    formatted_output = formatters[output_format](
+                        job_data.whisper_result)
+                    
+                    # Write to temporary file
+                    with tempfile.NamedTemporaryFile(
+                            mode='w',
+                            suffix="." + output_format,
+                            delete=False,
+                            encoding='utf-8') as tmp:
+                        tmp.write(formatted_output)
                         tmp_path = tmp.name
-                        writers[output_format](
-                            job_data.whisper_result, tmp_path)
-                        return send_file(tmp_path, mimetype="text/vtt")
+                    
+                    # Determine appropriate mimetype
+                    mimetypes = {
+                        "vtt": "text/vtt",
+                        "srt": "application/x-subrip",
+                        "txt": "text/plain",
+                        "csv": "text/tab-separated-values",
+                    }
+                    
+                    response = send_file(
+                        tmp_path,
+                        mimetype=mimetypes.get(output_format, "text/plain"),
+                        as_attachment=True,
+                        download_name=f"{req_id}.{output_format}"
+                    )
+                    
+                    # Clean up temp file after sending
+                    try:
+                        os.unlink(tmp_path)
+                    except:
+                        pass
+                    
+                    return response
                 except Exception as e:
-                    logging.debug(e)
+                    logging.error(f"Error generating format {output_format}: {e}")
                     return {"error": "Error while generating File: "
                                      + str(e)}, 500
             else:
@@ -184,6 +214,69 @@ def transcribe_delete():
             return {"error": "Unknown job status"}, 500
     else:
         return {"error": "Job not found"}, 404
+
+
+# VAD Routes
+@app.route("/vad", methods=['GET'])
+def vad_get():
+    """
+    Endpoint to get VAD (Voice Activity Detection) segments for a job.
+    
+    Formats:
+    - speech: CSV with just the speech segments
+    - timeline: CSV with full timeline (voice + silence intervals)
+    - json: JSON with segments and summary
+    
+    :return: HttpResponse
+    """
+    req_id = request.args.get("id")
+    output_format = request.args.get("format", "speech")
+    
+    if not req_id:
+        return {"error": "No job ID specified"}, 400
+    
+    if not ts_api.database.exists_job(req_id):
+        return {"error": "Job not found"}, 404
+    
+    job_data: Default.Entry = ts_api.database.load_job(req_id)
+    
+    # Check if VAD data exists
+    if not hasattr(job_data, 'vad_segments') or not job_data.vad_segments:
+        return {"error": "VAD data not available yet. Job may still be processing or VAD was not enabled."}, 404
+    
+    vad_data = job_data.vad_segments
+    segments = vad_data.get("segments", [])
+    audio_duration = vad_data.get("audio_duration", 0)
+    
+    if output_format == "speech":
+        # Just the speech segments as CSV
+        csv_content = generate_speech_csv(segments)
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={req_id}_vad_speech.csv"}
+        )
+    
+    elif output_format == "timeline":
+        # Full timeline with voice/silence markers
+        csv_content = generate_timeline_csv(segments, audio_duration)
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={req_id}_vad_timeline.csv"}
+        )
+    
+    elif output_format == "json":
+        # JSON with segments and summary
+        summary = generate_vad_summary(segments, audio_duration, vad_data.get("vad_removed"))
+        return {
+            "jobId": req_id,
+            "segments": segments,
+            "summary": summary
+        }, 200
+    
+    else:
+        return {"error": f"Unknown format: {output_format}. Use 'speech', 'timeline', or 'json'"}, 400
 
 
 # Add Module Routes here
