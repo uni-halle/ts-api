@@ -7,6 +7,10 @@ from abc import ABC, abstractmethod
 _now = time.time
 
 
+class JobCanceled(Exception):
+    """Raised when a job is canceled while it is being prepared."""
+
+
 # noinspection PyMethodOverriding
 class Default(ABC):
     """
@@ -89,9 +93,12 @@ class Default(ABC):
             return True
 
         @abstractmethod
-        def preprocessing(self) -> None:
+        def preprocessing(self, cancel_event=None) -> None:
             """
             Abstrakte Methode zur Vorverarbeitung von Daten.
             Kann von Unterklassen implementiert werden.
+            :param cancel_event: threading.Event, das gesetzt wird, wenn der
+            Job abgebrochen werden soll. Implementierungen sollten dann
+            JobCanceled auslösen.
             """
             pass

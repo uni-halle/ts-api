@@ -55,7 +55,7 @@ class File(Default):
                 return True
             return False
 
-        def preprocessing(self) -> None:
+        def preprocessing(self, cancel_event=None) -> None:
             """
             Abstrakte Methode zur Vorverarbeitung von Daten.
             Wird hier nicht benötigt.
