@@ -2,12 +2,16 @@ import logging
 import os
 import time
 
+from urllib.parse import urljoin
+
 import requests
 
 from core.TsApi import TsApi
 from packages.Default import Default, JobCanceled
+from utils.download_policy import check_download_url
 
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+MAX_REDIRECTS = 5
 
 
 class _RetryableDownloadError(Exception):
@@ -132,9 +136,8 @@ class Opencast(Default):
             logging.debug(f"Downloading file for job id {self.uid}...")
             try:
                 try:
-                    with requests.get(self.link, stream=True,
-                                      timeout=(connect_timeout,
-                                               read_timeout)) as response:
+                    with self._request((connect_timeout,
+                                        read_timeout)) as response:
                         if (response.status_code == 429
                                 or response.status_code >= 500):
                             raise _RetryableDownloadError(
@@ -160,3 +163,21 @@ class Opencast(Default):
                 if os.path.exists(part):
                     os.remove(part)
             logging.debug(f"Downloaded file for job id {self.uid}.")
+
+        def _request(self, timeout) -> requests.Response:
+            """
+            Requests the link. Redirects are followed manually, so every
+            target is checked against allowed_download_hosts.
+            :raises DownloadNotAllowed: If a URL must not be downloaded
+            """
+            url = self.link
+            for _ in range(MAX_REDIRECTS + 1):
+                check_download_url(url)
+                response = requests.get(url, stream=True, timeout=timeout,
+                                        allow_redirects=False)
+                if not response.is_redirect:
+                    return response
+                url = urljoin(url, response.headers["Location"])
+                response.close()
+            raise Exception(f"Failed to download file: more than "
+                            f"{MAX_REDIRECTS} redirects")

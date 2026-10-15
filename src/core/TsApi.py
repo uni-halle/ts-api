@@ -126,6 +126,9 @@ class TsApi:
 
     def exit(self, sig, frame):
         """Graceful shutdown, unfinished jobs are requeued on next start"""
+        if self.shutting_down:
+            # A second signal must not interrupt the running shutdown
+            return
         logging.info("Stopping TsAPI...")
         with self.wakeup:
             self.running = False

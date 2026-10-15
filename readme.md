@@ -6,8 +6,16 @@ This program provides a REST API to asynchronously subtitle video and audio file
 [![Lint](https://github.com/uni-halle/ts-api/actions/workflows/lint.yml/badge.svg)](https://github.com/uni-halle/ts-api/actions/workflows/lint.yml)
 
 
+> **Upgrading from a version before the SQLite job database?** Existing jobs and transcripts are not taken over, see [UPGRADING.md](UPGRADING.md).
+
 ## Quickstart
-Download the repository and build the Docker image via `docker build . -t ts-api:local` and launch the image via Docker compose provided by the repository .
+Download the repository and create a file `.env` next to `docker-compose.yaml` with the credentials for the API (there are no default credentials, TsAPI does not start without them) and the hosts files may be downloaded from:
+
+    login_username=choose-a-user
+    login_password=choose-a-long-password
+    allowed_download_hosts=opencast.example.org
+
+Then build and start the container with `docker compose up --build`. The API runs in [gunicorn](https://gunicorn.org/) with a single worker process (the job queue lives in that process), further gunicorn options can be passed in `GUNICORN_CMD_ARGS`.
 
 ### Access TsAPI
 After the container is started, the API is available under port 5000. Http requests can be sent there (see endpoints documentation for more info).
@@ -41,6 +49,8 @@ Possible formats are:
 ### Environment variables
 There are a few environment variables that affect the behavior of TsAPI.
 
+ - "login_username", "login_password" - Credentials for HTTP basic authentication. Required, there are no defaults.
+ - "allowed_download_hosts" - Comma separated list of hosts files may be downloaded from (Opencast links), e.g. `opencast.example.org`. An entry starting with a dot also allows all subdomains (`.example.org`), `*` allows every host. Only http and https URLs are accepted, redirects are checked as well. If the variable is not set, every host is allowed and a warning is logged.
  - "whisper_model" - Specifies the [faster-whisper](https://github.com/SYSTRAN/faster-whisper) model to be used (e.g. `large-v3-turbo`, `large-v3`, `medium`, `small`) or the path to a converted model. If the model is not already downloaded, it is downloaded on start (requires internet connection).
  - "whisper_device" - `auto` (default), `cpu` or `cuda`.
  - "whisper_compute_type" - e.g. `int8` (recommended on CPU), `float16` (recommended on GPU) or `default`.
@@ -55,7 +65,7 @@ There are a few environment variables that affect the behavior of TsAPI.
  - "download_retries" - How often a download is retried after connection errors, timeouts or HTTP 429/5xx (default 2).
  - "transcription_timeout" - Maximum duration of one transcription in seconds, 0 for no limit (default 0).
 
-The default settings are already contained in an .env file, but can be overwritten by variables in the environment.
+The defaults of the other settings are contained in the `.env` file of the image (`src/.env.example`) and can be overwritten by variables in the environment.
 
 ### Using it with GPU
 faster-whisper supports Nvidia GPUs via CUDA 12 and cuDNN 9. Please use the `cuda_gpu` branch for use with graphics card from Nvidia, its image contains the required libraries. Additionally, a local container-toolkit/nvidia driver installation is required. Updating drivers can lead to a non-booting system. Memory fragmentation, for instance, when using the graphics card for both, video output and transcription, can cause the model not to fit in spite of enough memory.
@@ -63,21 +73,24 @@ faster-whisper supports Nvidia GPUs via CUDA 12 and cuDNN 9. Please use the `cud
 https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation
 
 ## Local installation
-It is easily possible to run TsAPI locally without Docker (e.g. for development or testing). This requires both Python 3.10, ffmpeg and git to be installed on the system.
+It is easily possible to run TsAPI locally without Docker (e.g. for development or testing). This requires Python 3.10, ffmpeg and git to be installed on the system.
 First you clone the repo into a folder:
 
-    git clone https://git.itz.uni-halle.de/elearning/opencast/ts-api.git
+    git clone https://github.com/uni-halle/ts-api.git
+    cd ts-api
 
-After that you install the Python requirments:
+After that you install the Python requirements:
 
-    pip install -r requirments.txt
-And you can start TsAPI with the following command:
+    pip install -r requirements.txt
 
-    python -m flask --app ./src/app.py run
+And you can start TsAPI from the repository folder (the data is stored in `./data`):
+
+    login_username=user login_password=secret python -m flask --app ./src/app.py run
 
 ## Tests
-Test are written with PyTest and can be started via `python -m pytest`.
-Test coverage covers all functions of the `utils` and the basic creation of `TsAPI` and `Transcriber` objects. Tests do **not** cover the creation of subtitles via Whisper, as this would take too long.
+Tests are written with PyTest and can be started via `python -m pytest`. They run in a temporary data directory, replace Whisper by fake workers, never download a model and only access a local HTTP server.
+
+Tests with a real Whisper model are skipped by default. They are enabled with `TSAPI_REAL_MODEL_TESTS=1` and download the model given in `TSAPI_TEST_MODEL` (default `tiny`) once into `TSAPI_TEST_MODEL_DIR` (default `.cache/models`), which requires access to Hugging Face. The test audio is in `test/data/audio`, see the README there for its sources and licenses.
 
 ## Endpoints
 
@@ -88,17 +101,20 @@ Sends a file or link for subtitling to TsAPI.
 
 _Form parameter:_
 
- - file: The file
- - link: The link to a file
- - username: The username for auth (optional)
- - password: The password for auth (optional)
- - priority: The priority (> 0)
+ - priority: The priority (a number, the smaller the higher)
+ - file: The file, or
+ - module, module_id, link: `opencast`, the ID returned by `/module/opencast` and the link to the file (has to match `allowed_download_hosts`)
+ - title: Title of the recording, passed to Whisper as initial prompt (optional)
+
+Authentication is done with HTTP basic authentication.
 
 _Returns:_
 
     {
       "jobId": "1b0732a9-43f3-42c5-8a41-84043d158910"
     }
+
+Errors: 400 (invalid parameters or link not allowed), 415 (neither file nor link), 429 (queue limit of the Opencast module reached), 507 (not enough storage or RAM, or more than 50 jobs queued).
 
 ##### GET
 Requests the transcript for a specific JobID.
@@ -132,6 +148,37 @@ _Get parameter:_
 
 - id: The Job ID
 - format: `speech` (CSV of the speech segments, default), `timeline` (CSV of speech and silence) or `json` (segments and summary)
+
+### /module/opencast
+
+##### POST
+Registers an Opencast installation that sends links instead of files.
+
+_Form parameter:_
+
+- max_queue_length: Maximum number of queued or running jobs of this module
+
+_Returns:_
+
+    {
+      "moduleId": "0f1c4e8a-2b8e-4a39-9d7c-3c5b8f0a1e2d"
+    }
+
+### /model
+
+##### GET
+Requests the Whisper model used for a specific JobID.
+
+_Get parameter:_
+
+- id: The Job ID
+
+_Returns:_
+
+    {
+      "jobId": "b3a36e0c-f185-4c72-91bf-a7a36e0c777f",
+      "model": "large-v3-turbo"
+    }
 
 ### /language
 
@@ -179,6 +226,9 @@ _Returns:_
       "queue_length": 0,
       "ram_free": 29.0,
       "ram_usage": 71.0,
+      "storage_free": 120.5,
+      "storage_total": 250.0,
+      "storage_usage": 129.5,
       "parallel_downloads": 3,
       "running_downloads": 0,
       "running_jobs": 0,

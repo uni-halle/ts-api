@@ -2,6 +2,16 @@
 
 ## Build & Run
 
+There are no default credentials. Create a `.env` file next to
+`docker-compose.yaml` first (the curl examples below use `username` and
+`password`):
+
+```bash
+login_username=username
+login_password=password
+allowed_download_hosts=opencast.example.org
+```
+
 ```bash
 # Build and start the container
 docker compose build
