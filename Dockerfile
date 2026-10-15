@@ -26,4 +26,7 @@ ENV PATH=/home/${USER}/.local/bin:$PATH
 ENV FLASK_APP=/home/${USER}/ts-api/app.py
 WORKDIR /home/${USER}/ts-api
 
-CMD ["flask", "run", "--host=0.0.0.0"]
+# One worker process: the job queue lives in the process. Further options
+# can be passed in GUNICORN_CMD_ARGS.
+CMD ["gunicorn", "--workers", "1", "--threads", "8", \
+     "--bind", "0.0.0.0:5000", "app:app"]
