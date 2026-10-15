@@ -48,3 +48,9 @@ htmlcov/
 # Docker volumes
 docker-compose.override.yml
 
+
+# Local notes and VAD visualisation output
+.venv/
+*.png
+*.csv
+PR_NOTES.txt
