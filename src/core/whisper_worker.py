@@ -12,6 +12,7 @@ import tempfile
 from typing import Tuple, Optional
 
 from faster_whisper import WhisperModel
+from utils import util
 from utils.subtitle_splitter import (process_segments_with_word_timestamps,
                                      trim_long_subtitles)
 from utils.vad_capture import VADLogCapture
@@ -20,10 +21,10 @@ from utils.vad_capture import VADLogCapture
 def get_audio_duration(file_path: str) -> float:
     """
     Get the duration of an audio file in seconds using ffprobe.
-    
+
     Args:
         file_path: Path to the audio file
-        
+
     Returns:
         Duration in seconds, or 0.0 if unable to determine
     """
@@ -35,7 +36,11 @@ def get_audio_duration(file_path: str) -> float:
             "-of", "json",
             str(file_path)
         ]
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True)
         data = json.loads(result.stdout)
         duration = float(data["format"]["duration"])
         return duration
@@ -44,29 +49,29 @@ def get_audio_duration(file_path: str) -> float:
         return 0.0
 
 
-def extract_audio_sample(input_path: str, start_seconds: float, 
+def extract_audio_sample(input_path: str, start_seconds: float,
                          duration_seconds: float = 15.0) -> Optional[str]:
     """
     Extract a sample of audio from a specific timestamp.
-    
+
     Args:
         input_path: Path to the input audio file
         start_seconds: Start time in seconds
         duration_seconds: Duration of sample to extract
-        
+
     Returns:
         Path to temporary sample file, or None if extraction failed
     """
     try:
         # Create temp file for the sample
         temp_file = tempfile.NamedTemporaryFile(
-            suffix=".wav", 
+            suffix=".wav",
             delete=False,
             prefix=f"lang_sample_{int(start_seconds)}_"
         )
         temp_path = temp_file.name
         temp_file.close()
-        
+
         command = [
             "ffmpeg",
             "-y",  # Overwrite
@@ -79,87 +84,103 @@ def extract_audio_sample(input_path: str, start_seconds: float,
             "-c:a", "pcm_s16le",  # PCM format
             temp_path
         ]
-        
+
         result = subprocess.run(
-            command, 
-            capture_output=True, 
-            text=True, 
+            command,
+            capture_output=True,
+            text=True,
             check=False
         )
-        
+
         if result.returncode != 0:
-            logging.warning(f"Failed to extract sample at {start_seconds}s: {result.stderr}")
+            logging.warning(
+                f"Failed to extract sample at {start_seconds}s: "
+                f"{result.stderr}")
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
             return None
-            
+
         return temp_path
-        
+
     except Exception as e:
         logging.warning(f"Error extracting audio sample: {e}")
         return None
 
 
-def detect_language_multipoint(model: WhisperModel, file_path: str, 
-                                sample_points: list = None) -> Tuple[str, float]:
+def detect_language_from_start(model: WhisperModel,
+                               file_path: str) -> Tuple[str, float]:
+    """
+    Detect the language from the start of the audio (Whisper's default).
+    """
+    try:
+        segments_gen, info = model.transcribe(
+            file_path,
+            beam_size=1,
+            best_of=1,
+            vad_filter=True
+        )
+        next(segments_gen, None)
+        return info.language, info.language_probability
+    except Exception as e:
+        logging.error(f"Language detection failed: {e}")
+        return "en", 0.0
+
+
+def detect_language_multipoint(model: WhisperModel, file_path: str,
+                               sample_points: list = None
+                               ) -> Tuple[str, float]:
     """
     Detect language by sampling multiple points in the audio.
-    
+
     Samples at 20%, 40%, 60%, 80% of the audio and returns
     the language with the highest detection confidence.
-    
+
     Args:
         model: WhisperModel instance
         file_path: Path to the audio file
         sample_points: Optional list of percentages (0.0-1.0) to sample at
-        
+
     Returns:
         Tuple of (language_code, probability)
     """
     if sample_points is None:
         sample_points = [0.2, 0.4, 0.6, 0.8]  # 20%, 40%, 60%, 80%
-    
+
     # Get audio duration
     duration = get_audio_duration(file_path)
-    
+
     if duration <= 0:
-        logging.warning("Could not determine audio duration, falling back to single-point detection")
-        # Fall back to detecting from start
-        try:
-            segments_gen, info = model.transcribe(
-                file_path,
-                beam_size=1,
-                best_of=1,
-                vad_filter=True
-            )
-            next(segments_gen, None)
-            return info.language, info.language_probability
-        except Exception as e:
-            logging.error(f"Fallback detection failed: {e}")
-            return "en", 0.0
-    
-    logging.info(f"Audio duration: {duration:.1f}s, sampling at {len(sample_points)} points")
-    
+        logging.warning("Could not determine audio duration, falling back "
+                        "to single-point detection")
+        return detect_language_from_start(model, file_path)
+
+    logging.info(
+        f"Audio duration: {duration:.1f}s, sampling at "
+        f"{len(sample_points)} points")
+
     detections = []
     sample_files = []  # Track temp files for cleanup
-    
+
     for point in sample_points:
         start_time = duration * point
-        
+
         # Skip if we're too close to the end
         if start_time + 10 > duration:
             continue
-            
-        logging.debug(f"Sampling language at {start_time:.1f}s ({point*100:.0f}% of audio)")
-        
+
+        logging.debug(
+            f"Sampling language at {start_time:.1f}s "
+            f"({point*100:.0f}% of audio)")
+
         # Extract sample
-        sample_path = extract_audio_sample(file_path, start_time, duration_seconds=15.0)
-        
+        sample_path = extract_audio_sample(
+            file_path, start_time, duration_seconds=15.0)
+
         if sample_path is None:
             continue
-            
+
         sample_files.append(sample_path)
-        
+
         try:
             # Detect language on sample with VAD to skip silence
             segments_gen, info = model.transcribe(
@@ -174,7 +195,7 @@ def detect_language_multipoint(model: WhisperModel, file_path: str,
             )
             # Trigger detection by consuming generator
             next(segments_gen, None)
-            
+
             if info.language and info.language_probability > 0:
                 detections.append({
                     "point": point,
@@ -182,12 +203,14 @@ def detect_language_multipoint(model: WhisperModel, file_path: str,
                     "language": info.language,
                     "probability": info.language_probability
                 })
-                logging.debug(f"  -> Detected '{info.language}' with probability {info.language_probability:.2f}")
-                
+                logging.debug(
+                    f"  -> Detected '{info.language}' with probability "
+                    f"{info.language_probability:.2f}")
+
         except Exception as e:
             logging.warning(f"Detection at {start_time:.1f}s failed: {e}")
             continue
-    
+
     # Clean up temp files
     for temp_file in sample_files:
         try:
@@ -195,44 +218,63 @@ def detect_language_multipoint(model: WhisperModel, file_path: str,
                 os.unlink(temp_file)
         except Exception:
             pass
-    
+
     if not detections:
-        logging.warning("No successful language detections, defaulting to English")
-        return "en", 0.0
-    
+        # E.g. audio too short for the sample points
+        logging.info("No multi-point language detection possible, "
+                     "falling back to single-point detection")
+        return detect_language_from_start(model, file_path)
+
     # Find the detection with highest probability
     best = max(detections, key=lambda x: x["probability"])
-    
+
     # Log all detections for debugging
-    detection_summary = [(d['language'], round(d['probability'], 2), f"{d['point']*100:.0f}%") for d in detections]
+    detection_summary = [
+        (d['language'],
+         round(
+            d['probability'],
+            2),
+            f"{d['point']*100:.0f}%") for d in detections]
     logging.info(f"Language detections: {detection_summary}")
-    logging.info(f"Best detection: '{best['language']}' with probability {best['probability']:.2f} at {best['point']*100:.0f}%")
-    
+    logging.info(
+        f"Best detection: '{best['language']}' with probability "
+        f"{best['probability']:.2f} at {best['point']*100:.0f}%")
+
     return best["language"], best["probability"]
 
 
-def run(file_path, initial_prompt, result_queue):
+def _configure_logging():
     """
-    Transcribe one audio file and put the result on result_queue.
+    Logging of the spawned process. The faster_whisper logger is set to
+    DEBUG so that VADLogCapture receives the VAD segments, the handlers
+    keep the configured level.
+    """
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(util.log_level)
+    logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
+
+
+def run(params, result_queue):
+    """
+    Transcribe one audio file and put the messages on result_queue:
+    {"type": "language", ...} once the language is detected, then either
+    {"type": "result", ...} or {"type": "error", ...}.
     """
     try:
-        # Get configuration
-        model_size = os.environ.get("whisper_model")
-        device = os.environ.get("whisper_device", "cuda")
-        compute_type = os.environ.get("whisper_compute_type", "float16")
-        cpu_threads = int(os.environ.get("whisper_cpu_threads", "4"))
+        _configure_logging()
+        file_path = params["file_path"]
+        initial_prompt = params.get("initial_prompt")
+        model_size = os.environ.get("whisper_model", "large-v3-turbo")
+        device = os.environ.get("whisper_device", "auto")
+        compute_type = os.environ.get("whisper_compute_type", "default")
+        cpu_threads = int(os.environ.get("whisper_cpu_threads", 0))
         use_vad = os.environ.get("whisper_use_vad", "true").lower() == "true"
 
-        # Load Whisper model (faster-whisper)
-        model_kwargs = {
-            "device": device,
-            "compute_type": compute_type,
-            "download_root": "./data/models"
-        }
-        if device == "cpu":
-            model_kwargs["cpu_threads"] = cpu_threads
-
-        model = WhisperModel(model_size, **model_kwargs)
+        model = WhisperModel(params["model"],
+                             device=device,
+                             compute_type=compute_type,
+                             cpu_threads=cpu_threads,
+                             download_root="./data/models")
 
         # Detect language using multi-point sampling for robustness
         language, detected_prob = detect_language_multipoint(
@@ -325,4 +367,6 @@ def run(file_path, initial_prompt, result_queue):
         result_queue.put({"type": "result", "segments": segments_list,
                           "vad_segments": vad_data})
     except Exception as e:
-        result_queue.put({"type": "error", "error": str(e)})
+        logging.exception("Transcription failed")
+        result_queue.put({"type": "error",
+                          "error": f"{type(e).__name__}: {e}"})
