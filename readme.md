@@ -17,10 +17,14 @@ To subtitle a file send a *POST* request to `/transcribe` with the file and the 
 
 ### Checking transcription status
 After a job has been created, you can query the status of the job via a *GET* request to `/status`. The ID is transferred as a *GET* parameter. Possible states are:
- - "Prepared" - The job is prepared but not yet processed.
-- "Running" - The job is currently being processed.
-- "Whispered - The job is processed and the transcript can be retrieved.
+- "Queued" - The job waits for its file to be downloaded/prepared.
+- "Prepared" - The file is available, the job waits for a free Whisper worker.
+- "Processed" - The job is currently being transcribed.
+- "Whispered" - The job is processed and the transcript can be retrieved.
 - "Failed" - The job could not be processed because an error occurred with Whisper.
+- "Canceled" - The file could not be downloaded or the job was canceled.
+
+For failed and canceled jobs the response contains an `error` field with the reason.
 
 ### Request the transcript
 
@@ -29,7 +33,7 @@ Possible formats are:
 - txt
 - vtt
 - srt
-- tsv
+- csv / tsv (tab separated)
 - json
 
 ## Configuration
@@ -37,14 +41,24 @@ Possible formats are:
 ### Environment variables
 There are a few environment variables that affect the behavior of TsAPI.
 
- - "whisper_model" - Specifies Whisper model to be used. If the model is not already downloaded, it will try to download it (requires internet connection).
- - "whisper_cpu_threads" - Number of threads Whisper C++ should use.
+ - "whisper_model" - Specifies the [faster-whisper](https://github.com/SYSTRAN/faster-whisper) model to be used (e.g. `large-v3-turbo`, `large-v3`, `medium`, `small`) or the path to a converted model. If the model is not already downloaded, it is downloaded on start (requires internet connection).
+ - "whisper_device" - `auto` (default), `cpu` or `cuda`.
+ - "whisper_compute_type" - e.g. `int8` (recommended on CPU), `float16` (recommended on GPU) or `default`.
+ - "whisper_cpu_threads" - Number of threads Whisper should use on the CPU.
+ - "whisper_use_vad" - Skip silence with voice activity detection (default `true`).
+ - "subtitle_max_length" - Maximum number of characters per subtitle (default 80).
  - "parallel_workers" - Specifies the maximum number of Whisper instances that can run in parallel. Multithreading is already supported by Whisper and the value of the variable changes depending on your hardware.
+ - "parallel_downloads" - Maximum number of files that are downloaded at the same time (default 3). Downloads run independently of the Whisper workers, a failing download only affects its own job.
+ - "max_prepared_jobs" - Maximum number of downloaded files that wait for a Whisper worker (default `parallel_downloads + parallel_workers`).
+ - "download_connect_timeout", "download_read_timeout" - Timeouts in seconds for connecting and for receiving data (defaults 10 and 60).
+ - "download_timeout" - Maximum duration of one download in seconds (default 3600).
+ - "download_retries" - How often a download is retried after connection errors, timeouts or HTTP 429/5xx (default 2).
+ - "transcription_timeout" - Maximum duration of one transcription in seconds, 0 for no limit (default 0).
 
 The default settings are already contained in an .env file, but can be overwritten by variables in the environment.
 
 ### Using it with GPU
-So technically, thanks to PyTorch, it is possible that Whisper runs via Nvidia Cuda and thus becomes faster. Up to now this has not been tested because the hardware does not exist but the implementation is not in the TsAPI but in the Whisper Python library. It is unclear if the Docker container supports passing the GPU to Python or if it needs to be additionally modified for this.
+faster-whisper supports Nvidia GPUs via CUDA 12 and cuDNN 9. Please use the `cuda_gpu` branch, its image contains the required libraries. Additionally, a local container-toolkit/nvidia driver installation is required.
 
 ## Local installation
 It is easily possible to run TsAPI locally without Docker (e.g. for development or testing). This requires both Python 3.10, ffmpeg and git to be installed on the system.
@@ -97,7 +111,7 @@ _Returns:_
     The file in the requested format.
 
 ##### DELETE
-Delete the database entry for a specific JobID.
+Delete the database entry for a specific JobID. A running download or transcription of the job is canceled.
 
 _Delete Parameter:_
 
@@ -106,6 +120,16 @@ _Delete Parameter:_
 _Returns:_
 
     Code 200, OK
+
+### /vad
+
+##### GET
+Requests the speech segments found by the voice activity detection.
+
+_Get parameter:_
+
+- id: The Job ID
+- format: `speech` (CSV of the speech segments, default), `timeline` (CSV of speech and silence) or `json` (segments and summary)
 
 ### /language
 
@@ -153,6 +177,7 @@ _Returns:_
       "queue_length": 0,
       "ram_free": 29.0,
       "ram_usage": 71.0,
+      "parallel_downloads": 3,
       "running_downloads": 0,
       "running_jobs": 0,
       "swap_free": 78.7,

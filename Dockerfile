@@ -3,12 +3,11 @@ FROM python:3.10-slim
 ARG USER="python"
 ARG UID="1000"
 
-RUN apt -y update &&\
-    apt install -y ffmpeg git gcc clang clang-tools cmake&&\
+# ffmpeg/ffprobe are used to sample the audio for the language detection
+RUN apt-get -y update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/* && \
     useradd -m -u ${UID} -s /bin/bash ${USER}
-
-ENV CC=clang
-ENV CXX=clang++
 
 USER ${USER}
 
