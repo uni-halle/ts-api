@@ -1,17 +1,14 @@
-FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
-#FROM python:3.10-slim
+# faster-whisper (CTranslate2) needs CUDA 12 and cuDNN 9
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04
 
 ARG USER="python"
 ARG UID="5000"
 
+# ffmpeg/ffprobe are used to sample the audio for the language detection
 RUN apt-get -y update && \
-    apt-get install -y python3 python3-pip ffmpeg git gcc clang clang-tools cmake sudo bash ca-certificates wget curl make linux-headers-$(uname -r) && \
+    apt-get install -y --no-install-recommends python3 python3-pip ffmpeg ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
     useradd -m -u ${UID} -s /bin/bash ${USER}
-
-ENV CC=clang
-ENV CXX=clang++
-ENV GGML_CUDA=1
-ENV NO_REPAIR=1
 
 USER ${USER}
 
