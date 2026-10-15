@@ -2,6 +2,10 @@
 """
 Visualize VAD timeline as a horizontal bar chart.
 Voice segments in green, silence in gray.
+
+Input is the CSV of GET /vad?id=...&format=timeline.
+Usage: python visualize_vad.py vad_timeline.csv [output.png]
+Requires pandas and matplotlib (not part of requirements.txt).
 """
 import pandas as pd
 import matplotlib.pyplot as plt

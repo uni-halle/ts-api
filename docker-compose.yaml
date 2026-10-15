@@ -9,41 +9,17 @@ services:
       - data:/home/python/ts-api/data
     environment:
       - log=debug
-      
-      # ============================================================
-      # PRODUCTION (GPU) - uncomment this block for production
-      # ============================================================
-      # - whisper_model=large-v3-turbo
-      # - whisper_device=cuda
-      # - whisper_compute_type=float16
-      
-      # ============================================================
-      # LOCAL TESTING (CPU) - uncomment this block for local testing
-      # ============================================================
-      - whisper_model=tiny
+      # CPU settings, use the cuda_gpu branch for Nvidia GPUs
+      - whisper_model=large-v3-turbo
       - whisper_device=cpu
       - whisper_compute_type=int8
-      
-      # ============================================================
-      # Common settings
-      # ============================================================
       - whisper_cpu_threads=23
       - whisper_use_vad=true
       - subtitle_max_length=80
       - parallel_workers=1
+      - parallel_downloads=3
       - login_username=username
       - login_password=password
-    
-    # ============================================================
-    # GPU reservation - comment out for CPU-only local testing
-    # ============================================================
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
 
 volumes:
   data:

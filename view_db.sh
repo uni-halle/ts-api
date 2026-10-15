@@ -1,7 +1,8 @@
 #!/bin/bash
 # View database with readable status names
+# (requires membership in the docker group)
 
-sudo docker compose exec ts-api python3 -c "
+docker compose exec ts-api python3 -c "
 import sqlite3
 from datetime import datetime
 
