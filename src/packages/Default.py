@@ -3,6 +3,9 @@ import uuid
 
 from abc import ABC, abstractmethod
 
+# The parameter "time" of Default.Entry shadows the module
+_now = time.time
+
 
 # noinspection PyMethodOverriding
 class Default(ABC):
@@ -14,14 +17,16 @@ class Default(ABC):
     """
 
     @abstractmethod
-    def __init__(self, module_type: str, module_uid:
-                 str = str(uuid.uuid4()), queued_or_active=0) -> None:
+    def __init__(self, module_type: str, module_uid: str | None = None,
+                 queued_or_active=0) -> None:
         """
         Initialisiert ein Default-Modul mit einer eindeutigen ID und einem
         leeren Dictionary für Einträge.
         """
         self.module_type: str = module_type
-        self.module_uid: str = module_uid
+        # Default values are evaluated only once, so the uid has to be
+        # generated here
+        self.module_uid: str = module_uid or str(uuid.uuid4())
         self.queued_or_active: int = queued_or_active
 
     # noinspection PyMethodOverriding
@@ -39,7 +44,7 @@ class Default(ABC):
                      module,
                      uid: str,
                      priority: int,
-                     time: float = time.time(),
+                     time: float | None = None,
                      status: int | None = None,
                      initial_prompt: str | None = None,
                      whisper_result: str | None = None,
@@ -53,7 +58,7 @@ class Default(ABC):
             :param uid: Die eindeutige ID des Eintrags.
             """
             self.priority: int = priority
-            self.time: float = time
+            self.time: float = time if time is not None else _now()
             self.module: Default = module
             self.uid: str = uid
             self.status: int | None = status
