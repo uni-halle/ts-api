@@ -1,14 +1,17 @@
 import logging
-import io
+import os
+import time
 
-from werkzeug.datastructures import FileStorage
-
-import utils
 import requests
-from requests import request
 
 from core.TsApi import TsApi
-from packages.Default import Default
+from packages.Default import Default, JobCanceled
+
+DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+
+
+class _RetryableDownloadError(Exception):
+    """A download error that may go away when trying again."""
 
 
 # noinspection PyMethodOverriding
@@ -83,24 +86,77 @@ class Opencast(Default):
                           f" {self.uid} because of max queue length.")
             return False
 
-        def preprocessing(self) -> None:
+        def preprocessing(self, cancel_event=None) -> None:
             """
             Lädt die Datei von der angegebenen URL herunter und speichert
-            sie lokal.
-            Falls der Download fehlschlägt, wird eine Exception ausgelöst.
+            sie lokal. Vorübergehende Fehler (Verbindungsfehler, Timeouts,
+            HTTP 429/5xx) werden mehrfach versucht.
 
+            :param cancel_event: Wird es gesetzt, bricht der Download ab.
+            :raises JobCanceled: Falls der Job abgebrochen wurde.
             :raises Exception: Falls der Download fehlschlägt.
             """
+            retries = int(os.environ.get("download_retries", 2))
+            attempt = 0
+            while True:
+                try:
+                    self._download(cancel_event)
+                    return
+                except _RetryableDownloadError as e:
+                    attempt += 1
+                    if attempt > retries:
+                        raise Exception(f"Failed to download file: {e}")
+                    delay = min(2 ** attempt, 30)
+                    logging.warning(f"Download for job id {self.uid} "
+                                    f"failed ({e}), retrying in {delay}s "
+                                    f"({attempt}/{retries}).")
+                    if cancel_event and cancel_event.wait(delay):
+                        raise JobCanceled()
+                    if cancel_event is None:
+                        time.sleep(delay)
+
+        def _download(self, cancel_event=None) -> None:
+            """
+            Streamt die Datei auf die Festplatte, ohne sie vollständig in
+            den Arbeitsspeicher zu laden.
+            """
+            connect_timeout = float(
+                os.environ.get("download_connect_timeout", 10))
+            read_timeout = float(os.environ.get("download_read_timeout", 60))
+            max_duration = float(os.environ.get("download_timeout", 3600))
+            deadline = time.monotonic() + max_duration
+
+            target = os.path.join(os.getcwd(), "data", "audioInput",
+                                  self.uid)
+            part = target + ".part"
             logging.debug(f"Downloading file for job id {self.uid}...")
-            session: request = requests.Session()
-            response = session.get(self.link)
-            if response.status_code != 200:
-                raise Exception("Failed to download file.")
-            file = FileStorage(
-                stream=io.BytesIO(response.content),
-                filename=self.uid,
-                content_length=response.headers.get("Content-Length"),
-                content_type=response.headers.get("Content-Type")
-            )
-            utils.util.save_file(file, self.uid)
+            try:
+                try:
+                    with requests.get(self.link, stream=True,
+                                      timeout=(connect_timeout,
+                                               read_timeout)) as response:
+                        if (response.status_code == 429
+                                or response.status_code >= 500):
+                            raise _RetryableDownloadError(
+                                f"HTTP {response.status_code}")
+                        if response.status_code != 200:
+                            raise Exception(f"Failed to download file: HTTP "
+                                            f"{response.status_code}")
+                        with open(part, "wb") as file:
+                            for chunk in response.iter_content(
+                                    chunk_size=DOWNLOAD_CHUNK_SIZE):
+                                if cancel_event and cancel_event.is_set():
+                                    raise JobCanceled()
+                                if time.monotonic() > deadline:
+                                    raise Exception(
+                                        f"Failed to download file: not "
+                                        f"finished after {max_duration:g}s")
+                                file.write(chunk)
+                except (requests.ConnectionError, requests.Timeout,
+                        requests.exceptions.ChunkedEncodingError) as e:
+                    raise _RetryableDownloadError(str(e))
+                os.replace(part, target)
+            finally:
+                if os.path.exists(part):
+                    os.remove(part)
             logging.debug(f"Downloaded file for job id {self.uid}.")

@@ -1,17 +1,21 @@
+import hmac
 import logging
 import os
 import uuid
-import tempfile
 import psutil
 
-from flask import Flask, request, send_file
+from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage, Authorization
-from pywhispercpp.utils import output_vtt, output_csv, output_srt, output_txt
+from utils.formatters import (output_vtt, output_csv, output_srt, output_txt,
+                              output_json)
+from utils.vad_capture import (generate_speech_csv, generate_timeline_csv,
+                               generate_vad_summary)
 
 from packages.File import File
 from packages.Opencast import Opencast
 from packages.Default import Default
 from utils import util
+from utils.database import JobStatus
 from core.TsApi import TsApi
 from dotenv import load_dotenv
 
@@ -30,12 +34,19 @@ log.disabled = True
 @app.before_request
 def authorisation():
     auth: Authorization = request.authorization
-    if not (auth
-            and (auth.username == os.environ.get("login_username")
-                 and auth.password == os.environ.get("login_password"))):
+    if not (auth and auth.username is not None
+            and auth.password is not None
+            and _equals(auth.username, os.environ.get("login_username"))
+            and _equals(auth.password, os.environ.get("login_password"))):
         return ('Unauthorized', 401, {
             'WWW-Authenticate': 'Basic realm="Login Required"'
         })
+
+
+def _equals(given: str, expected: str | None) -> bool:
+    """Timing-safe comparison of credentials"""
+    return expected is not None and hmac.compare_digest(
+        given.encode(), expected.encode())
 
 
 # Transcribe Routes
@@ -74,7 +85,7 @@ def transcribe_post():
     if cpu_usage > 400:
         return {"error": "Not enough cpu"}, 507
 
-    if ts_api.database.queue.qsize() > 50:
+    if ts_api.queue_length > 50:
         return {"error": "The queue is full"}, 507
 
     # Old File.py upload
@@ -120,27 +131,40 @@ def transcribe_get():
     """
     req_id = request.args.get("id")
     output_format = request.args.get("format")
-    output_formats = ["vtt", "srt", "txt", "csv"]
+    output_formats = ["vtt", "srt", "txt", "csv", "tsv", "json"]
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if job_data.status >= 2:  # Whispered
+        if job_data.status == JobStatus.COMPLETED:  # Completed
             if output_format in output_formats:
-                writers = {
+                formatters = {
                     "vtt": output_vtt,
                     "srt": output_srt,
                     "txt": output_txt,
                     "csv": output_csv,
+                    "tsv": output_csv,
+                    "json": output_json,
+                }
+                mimetypes = {
+                    "vtt": "text/vtt",
+                    "srt": "application/x-subrip",
+                    "txt": "text/plain",
+                    "csv": "text/tab-separated-values",
+                    "tsv": "text/tab-separated-values",
+                    "json": "application/json",
                 }
                 try:
-                    with (tempfile.NamedTemporaryFile(suffix="."
-                          + output_format) as
-                          tmp):
-                        tmp_path = tmp.name
-                        writers[output_format](
-                            job_data.whisper_result, tmp_path)
-                        return send_file(tmp_path, mimetype="text/vtt")
+                    formatted_output = formatters[output_format](
+                        job_data.whisper_result)
+                    return Response(
+                        formatted_output,
+                        mimetype=mimetypes[output_format],
+                        headers={"Content-Disposition":
+                                 f"attachment; filename={req_id}."
+                                 f"{output_format}"}
+                    )
                 except Exception as e:
-                    logging.debug(e)
+                    logging.error(
+                        f"Error generating format {output_format}: {e}")
                     return {"error": "Error while generating File: "
                                      + str(e)}, 500
             else:
@@ -154,19 +178,83 @@ def transcribe_get():
 @app.route("/transcribe", methods=['DELETE'])
 def transcribe_delete():
     """
-    Endpoint to delete captions
+    Endpoint to cancel/delete a job
     :return: HttpResponse
     """
     req_id = request.args.get("id")
-    if ts_api.database.exists_job(req_id):
-        job_data: Default.Entry = ts_api.database.load_job(req_id)
-        if job_data.status <= 1 or job_data.status >= 2:
-            ts_api.database.delete_job(req_id)
-            return "OK", 200
-        else:
-            return {"error": "Job currently processing"}, 200
+    # Running downloads and transcriptions are canceled
+    if ts_api.delete_job(req_id):
+        return "OK", 200
     else:
         return {"error": "Job not found"}, 404
+
+
+# VAD Routes
+@app.route("/vad", methods=['GET'])
+def vad_get():
+    """
+    Endpoint to get VAD (Voice Activity Detection) segments for a job.
+
+    Formats:
+    - speech: CSV with just the speech segments
+    - timeline: CSV with full timeline (voice + silence intervals)
+    - json: JSON with segments and summary
+
+    :return: HttpResponse
+    """
+    req_id = request.args.get("id")
+    output_format = request.args.get("format", "speech")
+
+    if not req_id:
+        return {"error": "No job ID specified"}, 400
+
+    if not ts_api.database.exists_job(req_id):
+        return {"error": "Job not found"}, 404
+
+    job_data: Default.Entry = ts_api.database.load_job(req_id)
+
+    # Check if VAD data exists
+    if not hasattr(job_data, 'vad_segments') or not job_data.vad_segments:
+        return {"error": "VAD data not available yet. Job may still be "
+                         "processing or VAD was not enabled."}, 404
+
+    vad_data = job_data.vad_segments
+    segments = vad_data.get("segments", [])
+    audio_duration = vad_data.get("audio_duration", 0)
+
+    if output_format == "speech":
+        # Just the speech segments as CSV
+        csv_content = generate_speech_csv(segments)
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={"Content-Disposition":
+                     f"attachment; filename={req_id}_vad_speech.csv"}
+        )
+
+    elif output_format == "timeline":
+        # Full timeline with voice/silence markers
+        csv_content = generate_timeline_csv(segments, audio_duration)
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={"Content-Disposition":
+                     f"attachment; filename={req_id}_vad_timeline.csv"}
+        )
+
+    elif output_format == "json":
+        # JSON with segments and summary
+        summary = generate_vad_summary(
+            segments, audio_duration, vad_data.get("vad_removed"))
+        return {
+            "jobId": req_id,
+            "segments": segments,
+            "summary": summary
+        }, 200
+
+    else:
+        return {"error": f"Unknown format: {output_format}. Use 'speech', "
+                         f"'timeline', or 'json'"}, 400
 
 
 # Add Module Routes here
@@ -179,8 +267,10 @@ def module_opencast_post():
     max_queue_length: str = request.form.get("max_queue_length")
     if not max_queue_length:
         return {"error": "No max queue length specified"}, 400
+    if not max_queue_length.isnumeric():
+        return {"error": "Max queue length nan"}, 400
     module: Opencast = Opencast(max_queue_length=int(max_queue_length))
-    ts_api.database.modules[module.module_uid] = module
+    ts_api.database.add_module(module)
     return {"moduleId": module.module_uid}, 201
 
 
@@ -194,8 +284,11 @@ def status():
     req_id = request.args.get("id")
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
-        return {"jobId": req_id,
-                "status": util.get_status(job_data.status)}, 200
+        response = {"jobId": req_id,
+                    "status": util.get_status(job_data.status)}
+        if getattr(job_data, "error_message", None):
+            response["error"] = job_data.error_message
+        return response, 200
     else:
         return {"error": "Job not found"}, 404
 
@@ -218,10 +311,13 @@ def system_status():
         "storage_free": round(psutil.disk_usage('./').free / 1000000000, 1),
         "swap_usage": round(psutil.swap_memory().percent, 1),
         "swap_free": round(psutil.swap_memory().free
-                           * 100 / psutil.swap_memory().total, 1),
-        "queue_length": ts_api.database.queue.qsize(),
+                           * 100 / psutil.swap_memory().total, 1)
+        if psutil.swap_memory().total else 0.0,
+        "queue_length": ts_api.queue_length,
         "running_jobs": len(ts_api.running_jobs),
-        "parallel_jobs": int(os.environ.get("parallel_workers"))
+        "running_downloads": len(ts_api.downloading_jobs),
+        "parallel_jobs": ts_api.parallel_workers,
+        "parallel_downloads": ts_api.parallel_downloads
     }, 200
 
 
