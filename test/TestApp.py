@@ -80,6 +80,9 @@ class TestApp:
         assert response.mimetype == "application/x-subrip"
         assert response.data.decode() == \
             "1\n00:00:00,500 --> 00:00:01,500\nHallo\n"
+        response = client.get(f"/transcribe?id={job_id}&format=json",
+                              headers=AUTH)
+        assert response.json == [{"start": 0.5, "end": 1.5, "text": "Hallo"}]
         assert client.get(f"/language?id={job_id}",
                           headers=AUTH).json["language"] == "de"
         assert client.get(f"/vad?id={job_id}&format=json",
@@ -113,4 +116,4 @@ class TestApp:
         response = client.get("/status/system", headers=AUTH)
         assert response.status_code == 200
         assert response.json["queue_length"] == 0
-        assert response.json["downloading_jobs"] == 0
+        assert response.json["running_downloads"] == 0
