@@ -6,7 +6,8 @@ import psutil
 
 from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage, Authorization
-from utils.formatters import output_vtt, output_csv, output_srt, output_txt
+from utils.formatters import (output_vtt, output_csv, output_srt, output_txt,
+                              output_json)
 from utils.vad_capture import (generate_speech_csv, generate_timeline_csv,
                                generate_vad_summary)
 
@@ -130,7 +131,7 @@ def transcribe_get():
     """
     req_id = request.args.get("id")
     output_format = request.args.get("format")
-    output_formats = ["vtt", "srt", "txt", "csv"]
+    output_formats = ["vtt", "srt", "txt", "csv", "tsv", "json"]
     if ts_api.database.exists_job(req_id):
         job_data: Default.Entry = ts_api.database.load_job(req_id)
         if job_data.status == JobStatus.COMPLETED:  # Completed
@@ -140,12 +141,16 @@ def transcribe_get():
                     "srt": output_srt,
                     "txt": output_txt,
                     "csv": output_csv,
+                    "tsv": output_csv,
+                    "json": output_json,
                 }
                 mimetypes = {
                     "vtt": "text/vtt",
                     "srt": "application/x-subrip",
                     "txt": "text/plain",
                     "csv": "text/tab-separated-values",
+                    "tsv": "text/tab-separated-values",
+                    "json": "application/json",
                 }
                 try:
                     formatted_output = formatters[output_format](
@@ -310,7 +315,7 @@ def system_status():
         if psutil.swap_memory().total else 0.0,
         "queue_length": ts_api.queue_length,
         "running_jobs": len(ts_api.running_jobs),
-        "downloading_jobs": len(ts_api.downloading_jobs),
+        "running_downloads": len(ts_api.downloading_jobs),
         "parallel_jobs": ts_api.parallel_workers,
         "parallel_downloads": ts_api.parallel_downloads
     }, 200
