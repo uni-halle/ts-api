@@ -4,13 +4,13 @@
 
 ```bash
 # Build and start the container
-sudo docker compose build
-sudo docker compose up
+docker compose build
+docker compose up
 
 # Full reset (removing volumes)
-sudo docker compose down -v
-sudo docker compose build 
-sudo docker compose up
+docker compose down -v
+docker compose build 
+docker compose up
 ```
 
 ---
@@ -28,21 +28,17 @@ curl -X POST \
   "http://localhost:5000/transcribe"
 ```
 
-Returns: `{"id": "abc123-def456-..."}`
+Returns: `{"jobId": "abc123-def456-..."}`
 
 ### 2. Check job status
 
 ```bash
 curl -u username:password \
-  "http://localhost:5000/transcribe?id=YOUR_JOB_ID"
+  "http://localhost:5000/status?id=YOUR_JOB_ID"
 ```
 
-Status codes:
-- `0` = Queued
-- `1` = Prepared
-- `2` = Processing
-- `3` = Done
-- `4` = Failed
+Status values: `Queued`, `Prepared`, `Processed` (transcribing),
+`Whispered` (done), `Failed`, `Canceled`.
 
 ### 3. Get results
 
@@ -97,7 +93,7 @@ curl -X DELETE -u username:password \
 
 ## Configuration Switching
 
-All configuration is in two files. Comment/uncomment blocks as needed.
+All configuration is in `docker-compose.yaml`.
 
 ### Toggle VAD (Voice Activity Detection)
 
@@ -111,73 +107,20 @@ All configuration is in two files. Comment/uncomment blocks as needed.
 - whisper_use_vad=false
 ```
 
-No rebuild needed — just restart: `sudo docker compose down && sudo docker compose up`
+No rebuild needed — just restart: `docker compose down && docker compose up`
 
 ---
 
-### Toggle CPU / GPU Mode
+### CPU / GPU
 
-**Two files need changes:**
+`main` builds a CPU image (`whisper_device=cpu`, `whisper_compute_type=int8`).
+For Nvidia GPUs use the `cuda_gpu` branch, which uses a CUDA base image and
+`whisper_device=cuda`, `whisper_compute_type=float16`.
 
-#### File 1: `Dockerfile`
-
-```dockerfile
-# ==============================================================================
-# PRODUCTION (GPU) - uncomment for production
-# ==============================================================================
-# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04
-# RUN apt-get update && \
-#     apt-get install -y python3.10 python3-pip ffmpeg git && \
-#     ln -s /usr/bin/python3.10 /usr/bin/python && \
-#     useradd -m -u 5000 -s /bin/bash python && \
-#     rm -rf /var/lib/apt/lists/*
-
-# ==============================================================================
-# LOCAL TESTING (CPU) - uncomment for local testing
-# ==============================================================================
-FROM python:3.10-slim
-RUN apt-get update && \
-    apt-get install -y ffmpeg git && \
-    useradd -m -u 5000 -s /bin/bash python && \
-    rm -rf /var/lib/apt/lists/*
-```
-
-#### File 2: `docker-compose.yaml`
-
-```yaml
-environment:
-  # ============================================================
-  # PRODUCTION (GPU) - uncomment for production
-  # ============================================================
-  # - whisper_model=large-v3-turbo
-  # - whisper_device=cuda
-  # - whisper_compute_type=float16
-  
-  # ============================================================
-  # LOCAL TESTING (CPU) - uncomment for local testing
-  # ============================================================
-  - whisper_model=tiny
-  - whisper_device=cpu
-  - whisper_compute_type=int8
-
-# ...
-
-# ============================================================
-# GPU reservation - comment out for CPU-only local testing
-# ============================================================
-# deploy:
-#   resources:
-#     reservations:
-#       devices:
-#         - driver: nvidia
-#           count: 1
-#           capabilities: [gpu]
-```
-
-**After switching:** Rebuild required!
+After switching: rebuild required!
 
 ```bash
-sudo docker compose down
-sudo docker compose build
-sudo docker compose up
+docker compose down
+docker compose build
+docker compose up
 ```
