@@ -18,8 +18,11 @@ services:
       - subtitle_max_length=80
       - parallel_workers=1
       - parallel_downloads=3
-      - login_username=username
-      - login_password=password
+      # Hosts files may be downloaded from, e.g. opencast.example.org
+      - allowed_download_hosts=${allowed_download_hosts:-}
+      # No defaults, set them e.g. in a .env file next to this file
+      - login_username=${login_username:?login_username has to be set}
+      - login_password=${login_password:?login_password has to be set}
 
 volumes:
   data:
