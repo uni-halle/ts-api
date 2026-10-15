@@ -55,6 +55,15 @@ def wait_for_status(client, job_id, status, timeout=10):
     return False
 
 
+def test_refuses_to_start_without_credentials(monkeypatch):
+    monkeypatch.delenv("login_username", raising=False)
+    monkeypatch.setenv("login_password", "password")
+    sys.modules.pop("app", None)
+    with pytest.raises(RuntimeError, match="login_username"):
+        importlib.import_module("app")
+    sys.modules.pop("app", None)
+
+
 class TestApp:
 
     def test_authorisation(self, client):
@@ -111,6 +120,17 @@ class TestApp:
         assert wait_for_status(client, job_id, "Canceled")
         assert "error" in client.get(f"/status?id={job_id}",
                                      headers=AUTH).json
+
+    def test_forbidden_link(self, client, monkeypatch):
+        monkeypatch.setenv("allowed_download_hosts", "opencast.example.org")
+        module_id = client.post("/module/opencast", headers=AUTH, data={
+            "max_queue_length": "1"}).json["moduleId"]
+        for link in ("http://127.0.0.1:9/x", "ftp://opencast.example.org/x"):
+            response = client.post("/transcribe", headers=AUTH, data={
+                "priority": "1", "module": "opencast",
+                "module_id": module_id, "link": link})
+            assert response.status_code == 400
+            assert "allowed" in response.json["error"]
 
     def test_system_status(self, client):
         response = client.get("/status/system", headers=AUTH)

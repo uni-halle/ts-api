@@ -16,10 +16,26 @@ from packages.Opencast import Opencast
 from packages.Default import Default
 from utils import util
 from utils.database import JobStatus
+from utils.download_policy import (DownloadNotAllowed, allowed_download_hosts,
+                                   check_download_url)
 from core.TsApi import TsApi
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# There are no default credentials, refuse to start without them
+if not (os.environ.get("login_username")
+        and os.environ.get("login_password")):
+    _message = ("The environment variables login_username and "
+                "login_password have to be set, TsAPI does not start "
+                "without credentials.")
+    logging.error(_message)
+    raise RuntimeError(_message)
+
+if allowed_download_hosts() is None:
+    logging.warning("allowed_download_hosts is not set, files are "
+                    "downloaded from every host. Set it to the hosts of "
+                    "your Opencast installations.")
 
 app = Flask(__name__)
 
@@ -72,7 +88,6 @@ def transcribe_post():
 
     # Self-care system
     ram_usage = round(psutil.virtual_memory().percent, 1)
-    cpu_usage = round(psutil.cpu_percent(interval=0.5))
     storage_total = round(psutil.disk_usage('./').total / 1000000000, 1)
     storage_usage = round(psutil.disk_usage('./').used / 1000000000, 1)
 
@@ -81,9 +96,6 @@ def transcribe_post():
 
     if ram_usage > 90:
         return {"error": "Not enough ram"}, 507
-
-    if cpu_usage > 400:
-        return {"error": "Not enough cpu"}, 507
 
     if ts_api.queue_length > 50:
         return {"error": "The queue is full"}, 507
@@ -103,6 +115,10 @@ def transcribe_post():
     # Insert modules here
     elif module and module_id:
         if module == "opencast" and link:
+            try:
+                check_download_url(link)
+            except DownloadNotAllowed as e:
+                return {"error": str(e)}, 400
             if module_id in ts_api.database.modules:
                 module: Default = ts_api.database.modules[module_id]
                 module_entry: Opencast.Entry = (

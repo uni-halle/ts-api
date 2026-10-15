@@ -9,6 +9,7 @@ import core.TsApi
 from core.TsApi import TsApi
 from packages.Default import JobCanceled
 from packages.Opencast import Opencast
+from utils.download_policy import DownloadNotAllowed
 from utils.database import JobStatus
 
 
@@ -39,6 +40,18 @@ class LocalServer:
                         server.active -= 1
 
             def respond(self):
+                if self.path.startswith("/redirect-"):
+                    targets = {
+                        "/redirect-relative": "/ok",
+                        "/redirect-localhost":
+                            f"http://localhost:{server.port}/ok",
+                        "/redirect-ftp": "ftp://127.0.0.1/ok",
+                        "/redirect-loop": "/redirect-loop",
+                    }
+                    self.send_response(302)
+                    self.send_header("Location", targets[self.path])
+                    self.end_headers()
+                    return
                 if self.path.startswith("/slow"):
                     time.sleep(1)
                 if self.path.startswith("/missing"):
@@ -62,6 +75,7 @@ class LocalServer:
                 self.wfile.write(body)
 
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.port = self.httpd.server_port
         self.httpd.daemon_threads = True
         self.thread = threading.Thread(target=self.httpd.serve_forever,
                                        daemon=True)
@@ -141,6 +155,33 @@ class TestDownload:
         assert time.monotonic() - start < 4
         assert not os.path.exists(audio_path("UID"))
         assert not os.path.exists(audio_path("UID") + ".part")
+
+    def test_redirect_to_allowed_host(self, server, monkeypatch):
+        monkeypatch.setenv("allowed_download_hosts", "127.0.0.1")
+        self.entry(server.url("/redirect-relative")).preprocessing()
+        assert os.path.getsize(audio_path("UID")) == 5000
+
+    def test_redirect_to_forbidden_host(self, server, monkeypatch):
+        monkeypatch.setenv("allowed_download_hosts", "127.0.0.1")
+        with pytest.raises(DownloadNotAllowed):
+            self.entry(server.url("/redirect-localhost")).preprocessing()
+        assert "/ok" not in server.requests
+        assert not os.path.exists(audio_path("UID"))
+
+    def test_redirect_to_other_scheme(self, server):
+        with pytest.raises(DownloadNotAllowed):
+            self.entry(server.url("/redirect-ftp")).preprocessing()
+
+    def test_redirect_loop(self, server):
+        with pytest.raises(Exception, match="redirects"):
+            self.entry(server.url("/redirect-loop")).preprocessing()
+        assert server.requests["/redirect-loop"] == 6
+
+    def test_forbidden_link(self, server, monkeypatch):
+        monkeypatch.setenv("allowed_download_hosts", "opencast.example.org")
+        with pytest.raises(DownloadNotAllowed):
+            self.entry(server.url("/ok")).preprocessing()
+        assert server.requests == {}
 
     def test_cancel(self, server):
         event = threading.Event()

@@ -29,4 +29,7 @@ WORKDIR /home/${USER}/ts-api
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["flask", "run", "--host=0.0.0.0"]
+# One worker process: the job queue lives in the process. Further options
+# can be passed in GUNICORN_CMD_ARGS.
+CMD ["gunicorn", "--workers", "1", "--threads", "8", \
+     "--bind", "0.0.0.0:5000", "app:app"]
