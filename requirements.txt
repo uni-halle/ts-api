@@ -6,4 +6,7 @@ pytest~=8.3.3
 requests~=2.32.3
 flake8
 faster-whisper~=1.2
+# PyAV 19 removed av.open(metadata_errors=...), which faster-whisper 1.2.1 still passes:
+# every transcription fails with a TypeError. Drop the pin once faster-whisper supports PyAV 19.
+av>=11,<19
 gunicorn~=23.0
