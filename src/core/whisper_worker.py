@@ -49,6 +49,28 @@ def get_audio_duration(file_path: str) -> float:
         return 0.0
 
 
+class NoAudioStreamError(Exception):
+    """The media file has no audio stream (e.g. a video-only track)."""
+
+
+def has_audio_stream(file_path: str) -> bool:
+    """
+    Does the file contain at least one audio stream? Without one,
+    faster-whisper fails deep inside PyAV with "IndexError: tuple index out
+    of range". If ffprobe itself fails, True is returned so that the
+    decoder reports the real error.
+    """
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=index", "-of", "json", str(file_path)],
+            capture_output=True, text=True, check=True)
+        return bool(json.loads(result.stdout).get("streams"))
+    except Exception as e:
+        logging.warning(f"Could not check for an audio stream: {e}")
+        return True
+
+
 def extract_audio_sample(input_path: str, start_seconds: float,
                          duration_seconds: float = 15.0) -> Optional[str]:
     """
@@ -269,6 +291,10 @@ def run(params, result_queue):
         compute_type = os.environ.get("whisper_compute_type", "default")
         cpu_threads = int(os.environ.get("whisper_cpu_threads", 0))
         use_vad = os.environ.get("whisper_use_vad", "true").lower() == "true"
+
+        if not has_audio_stream(file_path):
+            raise NoAudioStreamError(
+                "the media file has no audio stream, nothing to transcribe")
 
         model = WhisperModel(params["model"],
                              device=device,
