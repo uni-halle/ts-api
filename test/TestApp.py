@@ -137,3 +137,5 @@ class TestApp:
         assert response.status_code == 200
         assert response.json["queue_length"] == 0
         assert response.json["running_downloads"] == 0
+        assert response.json["whisper_model"] == "small"
+        assert response.json["whisper_device"] in ("cpu", "cuda")
