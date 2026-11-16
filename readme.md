@@ -231,5 +231,11 @@ _Returns:_
       "running_downloads": 0,
       "running_jobs": 0,
       "swap_free": 78.7,
-      "swap_usage": 21.3
+      "swap_usage": 21.3,
+      "whisper_model": "large-v3-turbo",
+      "whisper_device": "cuda"
     }
+
+`whisper_model` is the configured model (for a path or a Hugging Face id only
+its last part), `whisper_device` the device it runs on: `cpu` or `cuda`
+(`auto` resolved).

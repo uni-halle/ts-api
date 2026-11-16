@@ -77,6 +77,11 @@ class TsApi:
 
         self._restore_queue()
         self.model_path = self._prepare_model()
+        # Reported by /status/system: clients show which model runs where
+        self.whisper_model = self.model_name(
+            os.environ.get("whisper_model", "large-v3-turbo"))
+        self.whisper_device = self.resolve_device(
+            os.environ.get("whisper_device", "auto"))
 
         self.running = True
         logging.info("TsAPI started!")
@@ -99,6 +104,33 @@ class TsApi:
             raise
         logging.info(f"Whisper model \"{model}\" available!")
         return path
+
+    @staticmethod
+    def model_name(model: str) -> str:
+        """
+        Short model name for display: "large-v3" for "large-v3",
+        "/models/large-v3/" or "Systran/faster-whisper-large-v3"
+        """
+        name = model.strip().rstrip("/\\").replace("\\", "/").split("/")[-1]
+        prefix = "faster-whisper-"
+        return name[len(prefix):] if name.startswith(prefix) else name
+
+    @staticmethod
+    def resolve_device(device: str) -> str:
+        """
+        The device Whisper runs on: "cpu" or "cuda" ("auto" means CUDA if a
+        GPU is usable, as in faster-whisper)
+        """
+        device = device.strip().lower() or "auto"
+        if device != "auto":
+            return device
+        try:
+            import ctranslate2
+            gpus = ctranslate2.get_cuda_device_count()
+            return "cuda" if gpus > 0 else "cpu"
+        except Exception as e:  # pragma: no cover (depends on the setup)
+            logging.warning(f"Could not determine the Whisper device: {e}")
+            return "auto"
 
     def _restore_queue(self):
         """Requeue the jobs that were queued or running on shutdown"""

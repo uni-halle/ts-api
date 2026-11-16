@@ -333,7 +333,9 @@ def system_status():
         "running_jobs": len(ts_api.running_jobs),
         "running_downloads": len(ts_api.downloading_jobs),
         "parallel_jobs": ts_api.parallel_workers,
-        "parallel_downloads": ts_api.parallel_downloads
+        "parallel_downloads": ts_api.parallel_downloads,
+        "whisper_model": ts_api.whisper_model,
+        "whisper_device": ts_api.whisper_device
     }, 200
 
 
