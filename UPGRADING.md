@@ -1,5 +1,18 @@
 # Upgrading
 
+## One branch for CPU and GPU
+
+The `cuda_gpu` branch is retired. `main` builds both images from one
+Dockerfile:
+
+- CPU: `docker build .` (unchanged).
+- Nvidia GPU: `docker build --build-arg VARIANT=cuda .`, or
+  `docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up --build`.
+  Published GPU images carry the suffix `-cuda`.
+
+The GPU image is unchanged: CUDA 12.6 with cuDNN 9, user `python` with UID
+5000 (the CPU image keeps UID 1000; `--build-arg UID=…` overrides both).
+
 ## To the SQLite / faster-whisper version
 
 This version replaces the JSON job database by SQLite and whisper.cpp
@@ -44,7 +57,7 @@ can be deleted. faster-whisper downloads its models into `data/models` again.
   transcription timeouts, see the [readme](readme.md#environment-variables).
 - The container runs gunicorn instead of the Flask development server. Keep
   a single worker process (`--workers 1`), the job queue lives in it.
-- The `cuda_gpu` image is based on CUDA 12 with cuDNN 9 (required by
+- The GPU (`cuda_gpu`, now `VARIANT=cuda`) image is based on CUDA 12 with cuDNN 9 (required by
   faster-whisper) instead of CUDA 13.
 
 ### API changes

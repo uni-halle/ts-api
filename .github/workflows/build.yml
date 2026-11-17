@@ -9,6 +9,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        # cpu: tags as before; cuda: the same tags with the suffix -cuda
+        variant: [cpu, cuda]
 
     steps:
     - uses: actions/checkout@v4
@@ -25,11 +29,14 @@ jobs:
       uses: docker/metadata-action@v4
       with:
         images: 'ghcr.io/uni-halle/ts-api'
+        flavor: |
+          suffix=${{ matrix.variant == 'cuda' && '-cuda' || '' }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
         context: .
+        build-args: VARIANT=${{ matrix.variant }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

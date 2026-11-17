@@ -123,14 +123,15 @@ No rebuild needed — just restart: `docker compose down && docker compose up`
 
 ### CPU / GPU
 
-`main` builds a CPU image (`whisper_device=cpu`, `whisper_compute_type=int8`).
-For Nvidia GPUs use the `cuda_gpu` branch, which uses a CUDA base image and
-`whisper_device=cuda`, `whisper_compute_type=float16`.
+`docker-compose.yaml` builds a CPU image (`whisper_device=cpu`,
+`whisper_compute_type=int8`). For Nvidia GPUs add the override
+`docker-compose.gpu.yaml`: it builds with `VARIANT=cuda` (CUDA base image) and
+sets `whisper_device=cuda`, `whisper_compute_type=float16`.
 
 After switching: rebuild required!
 
 ```bash
 docker compose down
-docker compose build
-docker compose up
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml build
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up
 ```

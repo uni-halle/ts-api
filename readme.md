@@ -68,7 +68,15 @@ There are a few environment variables that affect the behavior of TsAPI.
 The defaults of the other settings are contained in the `.env` file of the image (`src/.env.example`) and can be overwritten by variables in the environment.
 
 ### Using it with GPU
-faster-whisper supports Nvidia GPUs via CUDA 12 and cuDNN 9. Please use the `cuda_gpu` branch, its image contains the required libraries. Additionally, a local container-toolkit/nvidia driver installation is required.
+faster-whisper supports Nvidia GPUs via CUDA 12 and cuDNN 9. The same Dockerfile builds a GPU image with the required libraries when the build argument `VARIANT=cuda` is set (the default `cpu` builds the CPU image):
+
+    docker build --build-arg VARIANT=cuda -t ts-api:cuda .
+    # or with docker compose
+    docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up --build
+
+The GitHub workflow publishes both images: the CPU tags as before and the GPU tags with the suffix `-cuda`. Additionally, a local NVIDIA Container Toolkit / nvidia driver installation is required. Updating drivers can lead to a non-booting system. Memory fragmentation, for instance, when using the graphics card for both, video output and transcription, can cause the model not to fit in spite of enough memory.
+
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation
 
 ## Local installation
 It is easily possible to run TsAPI locally without Docker (e.g. for development or testing). This requires Python 3.10, ffmpeg and git to be installed on the system.

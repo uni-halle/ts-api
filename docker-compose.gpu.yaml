@@ -1,0 +1,15 @@
+# Nvidia GPU override (needs the NVIDIA Container Toolkit on the host):
+#   docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up --build
+services:
+  ts-api:
+    build:
+      context: .
+      args:
+        VARIANT: cuda
+    # list syntax: older Compose versions reject "gpus: all"
+    gpus:
+      - driver: nvidia
+        count: all
+    environment:
+      - whisper_device=cuda
+      - whisper_compute_type=float16
