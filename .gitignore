@@ -60,3 +60,6 @@ PR_NOTES.txt
 
 # Models downloaded by the tests
 .cache/
+
+# Local compose overrides
+compose.yml
